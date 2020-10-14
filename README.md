@@ -27,6 +27,10 @@ The proposed model is as follows:
   * force-pushes `release-candidates` to the study repo
   * outputs a URL to the "create Pull Request" page in github for the `release-candidates` branch of the study repo
 
+The benefit of maintaining a separate *redaction repo* is that when new outputs
+are generated and written to that repo, the usual git tools can be used to diff
+outputs, making it easier to reapply redactions or decide where new redactions
+should be applied.
 
 
 
