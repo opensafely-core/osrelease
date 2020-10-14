@@ -11,7 +11,9 @@ framework stores outputs marked as `medium_privacy` in the `project.yaml` file.
 
 The script here is a work in progress to help the review process.
 
-The current model is as follows:
+The current model is that people check out a study repo, edit outputs, copy edited outputs to the study repo, commit and push.
+
+The proposed model is as follows:
 
 * The outputs for a single workspace are stored in a per-workspace folder
 * This folder should be maintained as a local git repo (which we'll call the *redaction repo*). The redaction repos will never leave the server: it only exists for reviewers to track redaction activity over time. The git history may, therefore, contain identifying information.
