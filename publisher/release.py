@@ -40,7 +40,7 @@ def add_github_auth_to_repo(repo):
     return repo
 
 
-def run(cmd, raise_exc=True):
+def run_cmd(cmd, raise_exc=True):
     logger.info("Running `%s`", " ".join(cmd))
     result = subprocess.run(cmd, encoding="utf8", capture_output=True)
     if raise_exc:
@@ -102,15 +102,15 @@ def main(study_repo_url):
         os.chdir(d)
         study_repo_url_with_pat = add_github_auth_to_repo(study_repo_url)
         try:
-            run(["git", "clone", study_repo_url_with_pat, "repo"])
+            run_cmd(["git", "clone", study_repo_url_with_pat, "repo"])
         except subprocess.CalledProcessError:
             raise RuntimeError(f"Unable to clone {study_repo_url}")
 
         logger.debug(f"Checked out {study_repo_url_with_pat} to repo/")
         os.chdir("repo")
-        checked_out = run(["git", "checkout", release_branch], raise_exc=False)
+        checked_out = run_cmd(["git", "checkout", release_branch], raise_exc=False)
         if checked_out != 0:
-            run(["git", "checkout", "-b", release_branch])
+            run_cmd(["git", "checkout", "-b", release_branch])
         logger.debug("Copying files from current repo to the checked out one")
         for src, dst in files:
             dst = os.path.join(release_subdir, dst)
@@ -122,15 +122,17 @@ def main(study_repo_url):
             release_subdir.mkdir(parents=True, exist_ok=True)
             with open(release_subdir / "README.md", "w") as f:
                 f.write(index_markdown)
-            run(["git", "add", "--all"])
+            run_cmd(["git", "add", "--all"])
             trailer = f"Opensafely-released-from: {socket.getfqdn()}:{current_dir} "
-            commit_returncode = run(
+            commit_returncode = run_cmd(
                 ["git", "commit", "-m", f"{last_commit_message}\n\n{trailer}"],
                 raise_exc=False,
             )
 
             if commit_returncode == 0:
-                run(["git", "push", "-f", "--set-upstream", "origin", release_branch])
+                run_cmd(
+                    ["git", "push", "-f", "--set-upstream", "origin", release_branch]
+                )
                 print(
                     f"Pushed new changes. Open a PR at `{study_repo_url.replace('.git', '')}/compare/{release_branch}`"
                 )
