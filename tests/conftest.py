@@ -1,9 +1,10 @@
 import os
 import pathlib
-import pytest
 import shutil
 import subprocess
 import tempfile
+
+import pytest
 
 
 def git_init():
@@ -12,8 +13,7 @@ def git_init():
 
 @pytest.fixture(scope="function", autouse=True)
 def setup_env(monkeypatch):
-    """Set up config required to do commits
-    """
+    """Set up config required to do commits"""
     d = tempfile.mkdtemp()
     os.chdir(d)
     monkeypatch.setenv("HOME", d)
@@ -28,8 +28,8 @@ def setup_env(monkeypatch):
 
 @pytest.fixture
 def release_repo():
-    """Create a working folder which is a git repo, containing committed, staged and unstaged files
-    """
+    """Create a working folder which is a git repo, containing committed,
+    staged and unstaged files"""
     d = tempfile.TemporaryDirectory()
     os.chdir(d.name)
     git_init()
@@ -58,4 +58,3 @@ def study_repo():
     os.chdir(d.name)
     git_init()
     return d
-

@@ -27,7 +27,8 @@ logger.addHandler(ch)
 def add_github_auth_to_repo(repo):
     """Add Basic HTTP Auth to a Github repo, from the environment.
 
-    For example, `https://github.com/sebbacon/test.git` becomes `https:/<access_token>@github.com/sebbacon/test.git`
+    For example, `https://github.com/sebbacon/test.git` becomes
+    `https://<access_token>@github.com/sebbacon/test.git`
     """
     if "github.com" in repo:
         parts = urllib.parse.urlparse(repo)
@@ -134,7 +135,8 @@ def main(study_repo_url):
                     ["git", "push", "-f", "--set-upstream", "origin", release_branch]
                 )
                 print(
-                    f"Pushed new changes. Open a PR at `{study_repo_url.replace('.git', '')}/compare/{release_branch}`"
+                    "Pushed new changes. Open a PR at "
+                    f"`{study_repo_url.replace('.git', '')}/compare/{release_branch}`"
                 )
             else:
                 print("Nothing to do!")
