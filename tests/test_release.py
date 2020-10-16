@@ -4,6 +4,13 @@ import subprocess
 
 from publisher.release import main
 
+# Fixtures for these tests:
+#
+# a `release_repo` contains one file with two commits, one never-committed but
+# staged file, and one unstaged file
+#
+# a `study_repo` is an empty git repo
+
 
 def test_successful_push_message(capsys, release_repo, study_repo):
     os.chdir(release_repo.name)
