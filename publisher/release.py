@@ -9,6 +9,7 @@ import tempfile
 import urllib
 import urllib.parse
 from pathlib import Path
+from pathlib import PosixPath
 
 
 class RedactingStreamHandler(logging.StreamHandler):
@@ -63,7 +64,7 @@ def tree(directory):
 
 def make_index(subdir):
     lines = []
-    for path in sorted(Path(subdir).rglob("*")):
+    for path in sorted(PosixPath(subdir).rglob("*")):
         relpath = path.relative_to(subdir)
 
         if str(relpath) == "README.md":
