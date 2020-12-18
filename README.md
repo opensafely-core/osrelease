@@ -33,4 +33,22 @@ outputs, making it easier to reapply redactions or decide where new redactions
 should be applied.
 
 
+## Usage summary
+
+### Install
+* Log into L4 server
+* Run `/d/bin/install-osrelease.bat`
+* Close the console and reopen it
+* Check you can run `osrelease` (you'll get some help text)
+
+### Use
+* Log into L4 server
+* Open a console at the root of the workspace you want to publish (e.g. `/d/Level4Files/workspaces/my-amazing-research`)
+* If this is the first time any releases have been made, type `git init` to start a new git repo there
+* Run `git status` to see any changes
+* Run `git add` to add any new files, or changes from any existing files, to the local repo
+* Edit files to redact, as necessary
+* Commit any edits you make
+* Run `osrelease <github_remote_https_url>` (e.g. `osrelease https://github.com/opensafely/my-amazing-research`)
+* Follow the instructions. It will only publish files you have committed locally, and won't send any intermediate history; just their state as they currently are in the local repo
 
