@@ -9,7 +9,6 @@ import tempfile
 import urllib
 import urllib.parse
 from pathlib import Path
-from pathlib import PosixPath
 
 
 class RedactingStreamHandler(logging.StreamHandler):
@@ -64,17 +63,18 @@ def tree(directory):
 
 def make_index(subdir):
     lines = []
-    for path in sorted(PosixPath(subdir).rglob("*")):
+    for path in sorted(Path(subdir).rglob("*")):
         relpath = path.relative_to(subdir)
 
         if str(relpath) == "README.md":
             continue
         depth = len(relpath.parts) - 1
         spacer = "  " * depth
+        urlpath = "/".join(relpath.parts)
         if path.is_file():
-            lines.append(f"{spacer}* [{relpath}]({relpath})")
+            lines.append(f"{spacer}* [{urlpath}]({urlpath})")
         elif path.is_dir():
-            lines.append(f"{spacer}* {relpath}")
+            lines.append(f"{spacer}* {urlpath}")
     if lines:
         return "# Table of contents\n\n" + "\n".join(lines)
     else:
