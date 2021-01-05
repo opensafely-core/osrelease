@@ -46,6 +46,7 @@ should be applied.
 * Open a console at the root of the workspace you want to publish (e.g. `/d/Level4Files/workspaces/my-amazing-research`)
   * If doing this on the L3 server (_you shouldn't be..._) then be sure to do this in the `/e/FILESFORL4/workspaces` folder to mitigate the risk of publishing high-privacy outputs
 * If this is the first time any releases have been made, type `git init` to start a new git repo there
+   * On Windows, run `git config --global core.safecrlf false` to suppress warnings about CRLF conversion
 * Run `git status` to see any changes
 * Run `git add` to add any new files, or changes from any existing files, to the local repo
 * Edit files to redact, as necessary
