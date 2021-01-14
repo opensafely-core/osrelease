@@ -35,13 +35,6 @@ should be applied.
 
 ## Usage summary
 
-### Install
-* Log into L4 server
-* Run `/d/bin/install-osrelease.bat` (or `/e/bin/install-osrelease.bat` on the L3 server)
-* Close the console and reopen it
-* Check you can run `osrelease --help` (you'll get some help text)
-
-### Use
 * Log into L4 server
 * Open a console at the root of the workspace you want to publish (e.g. `/d/Level4Files/workspaces/my-amazing-research`)
   * If doing this on the L3 server (_you shouldn't be..._) then be sure to do this in the `/e/FILESFORL4/workspaces` folder to mitigate the risk of publishing high-privacy outputs
@@ -54,3 +47,26 @@ should be applied.
 * Run `osrelease <github_remote_https_url>` (e.g. `osrelease https://github.com/opensafely/my-amazing-research`)
 * Follow the instructions. It will only publish files you have committed locally, and won't send any intermediate history; just their state as they currently are in the local repo
 
+
+## Installing on TPP level 4 server
+
+* Create or update a checkout 
+
+    git clone https://github.com/opensafely/output-publisher /d/output-publisher
+
+* Create venv at `/d/osrelease`
+
+    /c/Program\ Files\Python39.exe -m pyenv /d/osrelease
+
+* Install into venv
+ 
+    /d/osrelease/Scripts/pip install -e /d/output-publisher
+
+* Ensure /d/osrelease/Scripts on path
+
+
+## Updating
+
+* Update checkout
+
+    cd /d/output-publisher && git pull
