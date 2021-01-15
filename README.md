@@ -62,7 +62,9 @@ should be applied.
  
     /d/osrelease/Scripts/pip install -e /d/output-publisher
 
-* Ensure /d/osrelease/Scripts on path
+* Put git hub token in /d/osrelease/token
+
+* Work with TPP to ensure /d/osrelease/Scripts on system PATH, and envvar PRIVATE_TOKEN_PATH=/d/osrelease/token is in the system environment.
 
 
 ## Updating
