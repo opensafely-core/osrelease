@@ -24,7 +24,7 @@ ch.setLevel(logging.DEBUG)
 logger.addHandler(ch)
 
 
-def add_github_auth_to_repo(repo):
+def add_github_auth_to_repo(repo, token):
     """Add Basic HTTP Auth to a Github repo, from the environment.
 
     For example, `https://github.com/sebbacon/test.git` becomes
@@ -35,7 +35,7 @@ def add_github_auth_to_repo(repo):
         assert not parts.username and not parts.password
         repo = urllib.parse.urlunparse(
             parts._replace(
-                netloc=f"{os.environ['PRIVATE_REPO_ACCESS_TOKEN']}@{parts.netloc}"
+                netloc=f"{token}@{parts.netloc}"
             )
         )
     return repo
@@ -90,7 +90,7 @@ def get_files():
     ]
 
 
-def main(study_repo_url):
+def main(study_repo_url, token):
 
     # List all files that are committed in the latest version
     last_commit_message = subprocess.check_output(
@@ -102,7 +102,7 @@ def main(study_repo_url):
     files = get_files()
     with tempfile.TemporaryDirectory() as d:
         os.chdir(d)
-        study_repo_url_with_pat = add_github_auth_to_repo(study_repo_url)
+        study_repo_url_with_pat = add_github_auth_to_repo(study_repo_url, token)
         try:
             run_cmd(["git", "clone", study_repo_url_with_pat, "repo"])
         except subprocess.CalledProcessError:
@@ -146,12 +146,32 @@ def main(study_repo_url):
         os.chdir(current_dir)
 
 
+def get_private_token(env=os.environ):
+    private_token = env.get('PRIVATE_REPO_ACCESS_TOKEN')
+    if not private_token:
+        token_path = env.get('PRIVATE_TOKEN_PATH')
+        if token_path:
+            try: 
+                private_token = Path(token_path).read_text()
+            except Exception:
+                pass
+    return private_token
+
+
 def run():
     parser = argparse.ArgumentParser()
     parser.add_argument("--verbose", "-v", action="count", default=0)
     parser.add_argument("--yes", "-t", action="store_true")
     parser.add_argument("study_repo_url")
     options = parser.parse_args()
+
+    private_token = get_private_token()
+    if not private_token:
+        sys.exit(
+            "Could not load private token from "
+            "PRIVATE_REPO_ACCESS_TOKEN or PRIVATE_TOKEN_PATH"
+        )
+
     cont = True
     if not options.yes:
         files = [x[1] for x in get_files()]
@@ -159,7 +179,7 @@ def run():
         print()
         cont = input("The above files will be published. Continue? (y/N)") == "y"
     if cont:
-        main(study_repo_url=options.study_repo_url)
+        main(options.study_repo_url, private_token)
 
 
 if __name__ == "__main__":
