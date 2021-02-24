@@ -101,49 +101,54 @@ def main(study_repo_url, token):
     current_dir = os.getcwd()
     files = get_files()
     with tempfile.TemporaryDirectory() as d:
-        os.chdir(d)
-        study_repo_url_with_pat = add_github_auth_to_repo(study_repo_url, token)
         try:
-            run_cmd(["git", "clone", study_repo_url_with_pat, "repo"])
-        except subprocess.CalledProcessError:
-            raise RuntimeError(f"Unable to clone {study_repo_url}")
+            os.chdir(d)
 
-        logger.debug(f"Checked out {study_repo_url_with_pat} to repo/")
-        os.chdir("repo")
-        checked_out = run_cmd(["git", "checkout", release_branch], raise_exc=False)
-        if checked_out != 0:
-            run_cmd(["git", "checkout", "-b", release_branch])
-        logger.debug("Copying files from current repo to the checked out one")
-        for src, dst in files:
-            dst = os.path.join(release_subdir, dst)
-            os.makedirs(os.path.dirname(dst), exist_ok=True)
-            logger.debug("Copied %s", src)
-            shutil.copy(src, dst)
-        index_markdown = make_index(release_subdir)
-        if index_markdown:
-            release_subdir.mkdir(parents=True, exist_ok=True)
-            with open(release_subdir / "README.md", "w") as f:
-                f.write(index_markdown)
-            run_cmd(["git", "add", "--all"])
-            trailer = f"Opensafely-released-from: {socket.getfqdn()}:{current_dir} "
-            commit_returncode = run_cmd(
-                ["git", "commit", "-m", f"{last_commit_message}\n\n{trailer}"],
-                raise_exc=False,
-            )
+            study_repo_url_with_pat = add_github_auth_to_repo(study_repo_url, token)
+            try:
+                run_cmd(["git", "clone", study_repo_url_with_pat, "repo"])
+            except subprocess.CalledProcessError:
+                raise RuntimeError(f"Unable to clone {study_repo_url}")
 
-            if commit_returncode == 0:
-                run_cmd(
-                    ["git", "push", "-f", "--set-upstream", "origin", release_branch]
+            logger.debug(f"Checked out {study_repo_url} to repo/")
+            os.chdir("repo")
+            checked_out = run_cmd(["git", "checkout", release_branch], raise_exc=False)
+            if checked_out != 0:
+                run_cmd(["git", "checkout", "-b", release_branch])
+            logger.debug("Copying files from current repo to the checked out one")
+            for src, dst in files:
+                dst = os.path.join(release_subdir, dst)
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                logger.debug("Copied %s", src)
+                shutil.copy(src, dst)
+            index_markdown = make_index(release_subdir)
+            if index_markdown:
+                release_subdir.mkdir(parents=True, exist_ok=True)
+                with open(release_subdir / "README.md", "w") as f:
+                    f.write(index_markdown)
+                run_cmd(["git", "add", "--all"])
+                trailer = f"Opensafely-released-from: {socket.getfqdn()}:{current_dir} "
+                commit_returncode = run_cmd(
+                    ["git", "commit", "-m", f"{last_commit_message}\n\n{trailer}"],
+                    raise_exc=False,
                 )
-                print(
-                    "Pushed new changes. Open a PR at "
-                    f"`{study_repo_url.replace('.git', '')}/compare/{release_branch}`"
-                )
+
+                if commit_returncode == 0:
+                    run_cmd(
+                        ["git", "push", "-f", "--set-upstream", "origin", release_branch]
+                    )
+                    print(
+                        "Pushed new changes. Open a PR at "
+                        f"`{study_repo_url.replace('.git', '')}/compare/{release_branch}`"
+                    )
+                else:
+                    print("Nothing to do!")
             else:
-                print("Nothing to do!")
-        else:
-            print("Local repo is empty!")
-        os.chdir(current_dir)
+                print("Local repo is empty!")
+        finally:
+            # ensure we do not maintain an open handle on the temp dir, or else
+            # the clean up fails
+            os.chdir(current_dir)
 
 
 def get_private_token(env=os.environ):
