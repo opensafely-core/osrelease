@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import socket
+import sys
 import subprocess
 import tempfile
 import urllib
@@ -33,11 +34,7 @@ def add_github_auth_to_repo(repo, token):
     if "github.com" in repo:
         parts = urllib.parse.urlparse(repo)
         assert not parts.username and not parts.password
-        repo = urllib.parse.urlunparse(
-            parts._replace(
-                netloc=f"{token}@{parts.netloc}"
-            )
-        )
+        repo = urllib.parse.urlunparse(parts._replace(netloc=f"{token}@{parts.netloc}"))
     return repo
 
 
@@ -135,7 +132,14 @@ def main(study_repo_url, token):
 
                 if commit_returncode == 0:
                     run_cmd(
-                        ["git", "push", "-f", "--set-upstream", "origin", release_branch]
+                        [
+                            "git",
+                            "push",
+                            "-f",
+                            "--set-upstream",
+                            "origin",
+                            release_branch,
+                        ]
                     )
                     print(
                         "Pushed new changes. Open a PR at "
@@ -152,14 +156,17 @@ def main(study_repo_url, token):
 
 
 def get_private_token(env=os.environ):
-    private_token = env.get('PRIVATE_REPO_ACCESS_TOKEN')
-    if not private_token:
-        token_path = env.get('PRIVATE_TOKEN_PATH')
-        if token_path:
-            try: 
-                private_token = Path(token_path).read_text()
-            except Exception:
-                pass
+    private_token = env.get("PRIVATE_REPO_ACCESS_TOKEN")
+    if private_token:
+        return private_token.strip()
+
+    token_path = env.get("PRIVATE_TOKEN_PATH")
+    if token_path:
+        try:
+            private_token = Path(token_path).read_text().strip()
+        except Exception:
+            pass
+
     return private_token
 
 
