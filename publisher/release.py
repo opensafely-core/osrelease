@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import os
 import re
@@ -139,7 +140,7 @@ def main(study_repo_url, token):
                             "--set-upstream",
                             "origin",
                             release_branch,
-                        ]
+                            ]
                     )
                     print(
                         "Pushed new changes. Open a PR at "
@@ -170,12 +171,38 @@ def get_private_token(env=os.environ):
     return private_token
 
 
+def find_study_url(path):
+    manifest_path = path / "metadata/manifest.json"
+    if manifest_path.exists():
+        try:
+            manifest = json.load(manifest_path.open())
+        except json.JSONDecodeError:
+            return None
+        else:
+            return manifest.get("repo")
+    
+    # we've reached the top
+    if path.parent == path:
+        return
+
+    # recurse upwards
+    return find_study_url(path.parent)
+
+
 def run():
     parser = argparse.ArgumentParser()
     parser.add_argument("--verbose", "-v", action="count", default=0)
     parser.add_argument("--yes", "-t", action="store_true")
-    parser.add_argument("study_repo_url")
+    parser.add_argument("study_repo_url", nargs='?')
     options = parser.parse_args()
+
+    if options.study_repo_url:
+        if not options.study_repo_url.startswith("https://github.com/opensafely/"):
+            sys.exit("Invalid url: must start with https://github.com/opensafely/")
+    else:
+        options.study_repo_url = find_study_url(Path(os.getcwd()))
+        if not options.study_repo_url:
+            sys.exit("Could not find repo url in metadata/manifest.json - please supply the repo url manually.")
 
     private_token = get_private_token()
     if not private_token:
