@@ -1,8 +1,13 @@
+import json
 import os
 import pathlib
 import subprocess
 
-from publisher.release import main, get_private_token
+from publisher.release import (
+    main,
+    get_private_token,
+    find_study_url,
+)
 
 # Fixtures for these tests:
 #
@@ -69,8 +74,8 @@ def test_noop_message(capsys, release_repo, study_repo):
     assert captured.out.splitlines()[-1] == "Nothing to do!"
 
 
-def test_get_private_token(tmpdir):
-    token_path = tmpdir / "token"
+def test_get_private_token(tmp_path):
+    token_path = tmp_path / "token"
     token_path.write_text("file token", "utf8")
     assert get_private_token({}) is None
     assert get_private_token({"PRIVATE_REPO_ACCESS_TOKEN": "env token"}) == "env token"
@@ -85,3 +90,18 @@ def test_get_private_token(tmpdir):
         )
         == "env token"
     )
+
+
+def test_find_study_url(tmp_path):
+    manifest_path = tmp_path / "metadata" / "manifest.json"
+    manifest_path.parent.mkdir()
+    manifest_path.write_text(json.dumps({"repo": "url"}))
+    workdir = tmp_path / 'release'
+    workdir.mkdir()
+    assert find_study_url(workdir) == "url"
+
+
+def test_find_study_url_not_found(tmp_path):
+    workdir = tmp_path / 'release'
+    workdir.mkdir()
+    assert find_study_url(workdir) is None
