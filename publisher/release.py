@@ -81,14 +81,14 @@ def make_index(subdir):
 
 def get_files():
     return [
-        (os.path.abspath(x), x)
+        Path(x)
         for x in subprocess.check_output(
             ["git", "ls-tree", "-r", "HEAD", "--name-only"], encoding="utf8"
         ).splitlines()
     ]
 
 
-def main(study_repo_url, token):
+def main(study_repo_url, token, files):
 
     # List all files that are committed in the latest version
     last_commit_message = subprocess.check_output(
@@ -96,8 +96,7 @@ def main(study_repo_url, token):
     ).strip()
     release_branch = "release-candidates"
     release_subdir = Path("released_outputs")
-    current_dir = os.getcwd()
-    files = get_files()
+    repo_dir = Path(os.getcwd())
     with tempfile.TemporaryDirectory() as d:
         try:
             os.chdir(d)
@@ -114,18 +113,20 @@ def main(study_repo_url, token):
             if checked_out != 0:
                 run_cmd(["git", "checkout", "-b", release_branch])
             logger.debug("Copying files from current repo to the checked out one")
-            for src, dst in files:
-                dst = os.path.join(release_subdir, dst)
-                os.makedirs(os.path.dirname(dst), exist_ok=True)
+            for path in files:
+                dst = release_subdir / path
+                src = repo_dir / path
+                dst.parent.mkdir(exist_ok=True, parents=True)
                 logger.debug("Copied %s", src)
                 shutil.copy(src, dst)
+
             index_markdown = make_index(release_subdir)
             if index_markdown:
                 release_subdir.mkdir(parents=True, exist_ok=True)
                 with open(release_subdir / "README.md", "w") as f:
                     f.write(index_markdown)
                 run_cmd(["git", "add", "--all"])
-                trailer = f"Opensafely-released-from: {socket.getfqdn()}:{current_dir} "
+                trailer = f"Opensafely-released-from: {socket.getfqdn()}:{repo_dir} "
                 commit_returncode = run_cmd(
                     ["git", "commit", "-m", f"{last_commit_message}\n\n{trailer}"],
                     raise_exc=False,
@@ -153,7 +154,7 @@ def main(study_repo_url, token):
         finally:
             # ensure we do not maintain an open handle on the temp dir, or else
             # the clean up fails
-            os.chdir(current_dir)
+            os.chdir(repo_dir)
 
 
 def get_private_token(env=os.environ):
@@ -171,7 +172,7 @@ def get_private_token(env=os.environ):
     return private_token
 
 
-def find_study_url(path):
+def find_manifest(path):
     manifest_path = path / "metadata/manifest.json"
     if manifest_path.exists():
         try:
@@ -179,14 +180,14 @@ def find_study_url(path):
         except json.JSONDecodeError:
             return None
         else:
-            return manifest.get("repo")
+            return manifest
     
     # we've reached the top
     if path.parent == path:
-        return
+        return None
 
     # recurse upwards
-    return find_study_url(path.parent)
+    return find_manifest(path.parent)
 
 
 def run():
@@ -196,14 +197,15 @@ def run():
     parser.add_argument("study_repo_url", nargs='?')
     options = parser.parse_args()
 
+    manifest = find_manifest(Path(os.getcwd()))
+    if manifest is None:
+        sys.exit("Could not metadata/manifest.json - are you in a workspace directory?")
+
     if options.study_repo_url:
         if not options.study_repo_url.startswith("https://github.com/opensafely/"):
             sys.exit("Invalid url: must start with https://github.com/opensafely/")
     else:
-        options.study_repo_url = find_study_url(Path(os.getcwd()))
-        if not options.study_repo_url:
-            sys.exit("Could not find repo url in metadata/manifest.json - please supply the repo url manually.")
-
+        options.study_repo_url = manifest["repo"]
     private_token = get_private_token()
     if not private_token:
         sys.exit(
@@ -211,14 +213,15 @@ def run():
             "PRIVATE_REPO_ACCESS_TOKEN or PRIVATE_TOKEN_PATH"
         )
 
-    cont = True
+    files = get_files()
+
     if not options.yes:
-        files = [x[1] for x in get_files()]
-        print("\n".join(files))
+        print("\n".join(str(f) for f in files))
         print()
-        cont = input("The above files will be published. Continue? (y/N)") == "y"
-    if cont:
-        main(options.study_repo_url, private_token)
+        if input("The above files will be published. Continue? (y/N)").lower() != "y":
+            sys.exit()
+
+    main(options.study_repo_url, private_token, files)
 
 
 if __name__ == "__main__":
