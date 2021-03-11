@@ -5,12 +5,13 @@ import os
 import re
 import shutil
 import socket
-import sys
 import subprocess
+import sys
 import tempfile
-import urllib
 import urllib.parse
 from pathlib import Path
+
+from . import upload
 
 
 class RedactingStreamHandler(logging.StreamHandler):
@@ -141,7 +142,7 @@ def main(study_repo_url, token, files):
                             "--set-upstream",
                             "origin",
                             release_branch,
-                            ]
+                        ]
                     )
                     print(
                         "Pushed new changes. Open a PR at "
@@ -180,11 +181,11 @@ def find_manifest(path):
         except json.JSONDecodeError:
             return None
         else:
-            return manifest, manifest_path
-    
+            return manifest
+
     # we've reached the top
     if path.parent == path:
-        return None, None
+        return None
 
     # recurse upwards
     return find_manifest(path.parent)
@@ -195,24 +196,32 @@ def run():
     parser.add_argument("--verbose", "-v", action="count", default=0)
     parser.add_argument("--yes", "-t", action="store_true")
     parser.add_argument("--new-publish", "-n", action="store_true")
-    parser.add_argument("study_repo_url", nargs='?')
+    parser.add_argument("study_repo_url", nargs="?")
     options = parser.parse_args()
 
-    manfiest, manifest_path = find_manifest(Path(os.getcwd()))
+    release_dir = Path(os.getcwd())
+    manifest = find_manifest(release_dir)
+
     if manifest is None:
         sys.exit("Could not metadata/manifest.json - are you in a workspace directory?")
 
-    if options.study_repo_url:
-        if not options.study_repo_url.startswith("https://github.com/opensafely/"):
-            sys.exit("Invalid url: must start with https://github.com/opensafely/")
+    if options.new_publish:
+        backend_token = upload.get_backend_token()
+        if not backend_token:
+            sys.exit("Could not load authentication token")
     else:
-        options.study_repo_url = manifest["repo"]
-    private_token = get_private_token()
-    if not private_token:
-        sys.exit(
-            "Could not load private token from "
-            "PRIVATE_REPO_ACCESS_TOKEN or PRIVATE_TOKEN_PATH"
-        )
+        if options.study_repo_url:
+            if not options.study_repo_url.startswith("https://github.com/opensafely/"):
+                sys.exit("Invalid url: must start with https://github.com/opensafely/")
+        else:
+            options.study_repo_url = manifest["repo"]
+
+        private_token = get_private_token()
+        if not private_token:
+            sys.exit(
+                "Could not load private token from "
+                "PRIVATE_REPO_ACCESS_TOKEN or PRIVATE_TOKEN_PATH"
+            )
 
     files = get_files()
 
@@ -222,7 +231,22 @@ def run():
         if input("The above files will be published. Continue? (y/N)").lower() != "y":
             sys.exit()
 
-    main(options.study_repo_url, private_token, files)
+    try:
+        if options.new_publish:
+            sys.exit(
+                upload.main(
+                    release_dir,
+                    files,
+                    manifest,
+                    backend_token,
+                )
+            )
+        else:
+            main(options.study_repo_url, private_token, files)
+    except Exception as exc:
+        if options.verbose > 0:
+            raise
+        sys.exit(exc)
 
 
 if __name__ == "__main__":

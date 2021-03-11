@@ -3,12 +3,7 @@ import os
 import pathlib
 import subprocess
 
-from publisher.release import (
-    main,
-    get_files,
-    get_private_token,
-    find_manifest,
-)
+from publisher.release import find_manifest, get_files, get_private_token, main
 
 # Fixtures for these tests:
 #
@@ -97,15 +92,12 @@ def test_find_manifest(tmp_path):
     manifest_path = tmp_path / "metadata" / "manifest.json"
     manifest_path.parent.mkdir()
     manifest_path.write_text(json.dumps({"repo": "url"}))
-    workdir = tmp_path / 'release'
+    workdir = tmp_path / "release"
     workdir.mkdir()
-    assert find_manifest(workdir) == (
-        {"repo": "url"},
-        manifest_path
-    )
+    assert find_manifest(workdir) == {"repo": "url"}
 
 
 def test_find_manifest_not_found(tmp_path):
-    workdir = tmp_path / 'release'
+    workdir = tmp_path / "release"
     workdir.mkdir()
-    assert find_manifest(workdir) == (None, None)
+    assert find_manifest(workdir) is None
