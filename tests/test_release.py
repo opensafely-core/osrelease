@@ -78,12 +78,12 @@ def test_find_manifest(tmp_path):
     manifest_path = tmp_path / "metadata" / "manifest.json"
     manifest_path.parent.mkdir()
     manifest_path.write_text(json.dumps({"repo": "url"}))
-    workdir = tmp_path / 'release'
+    workdir = tmp_path / "release"
     workdir.mkdir()
     assert find_manifest(workdir) == {"repo": "url"}
 
 
 def test_find_manifest_not_found(tmp_path):
-    workdir = tmp_path / 'release'
+    workdir = tmp_path / "release"
     workdir.mkdir()
     assert find_manifest(workdir) is None
