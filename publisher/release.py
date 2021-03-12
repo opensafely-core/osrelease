@@ -12,6 +12,8 @@ import urllib
 import urllib.parse
 from pathlib import Path
 
+from publisher.config import get_private_github_token
+
 
 class RedactingStreamHandler(logging.StreamHandler):
     def emit(self, record):
@@ -157,21 +159,6 @@ def main(study_repo_url, token, files):
             os.chdir(repo_dir)
 
 
-def get_private_token(env=os.environ):
-    private_token = env.get("PRIVATE_REPO_ACCESS_TOKEN")
-    if private_token:
-        return private_token.strip()
-
-    token_path = env.get("PRIVATE_TOKEN_PATH")
-    if token_path:
-        try:
-            private_token = Path(token_path).read_text().strip()
-        except Exception:
-            pass
-
-    return private_token
-
-
 def find_manifest(path):
     manifest_path = path / "metadata/manifest.json"
     if manifest_path.exists():
@@ -206,7 +193,7 @@ def run():
             sys.exit("Invalid url: must start with https://github.com/opensafely/")
     else:
         options.study_repo_url = manifest["repo"]
-    private_token = get_private_token()
+    private_token = get_private_github_token()
     if not private_token:
         sys.exit(
             "Could not load private token from "

@@ -6,7 +6,6 @@ import subprocess
 from publisher.release import (
     main,
     get_files,
-    get_private_token,
     find_manifest,
 )
 
@@ -73,24 +72,6 @@ def test_noop_message(capsys, release_repo, study_repo):
     main(study_repo_url=study_repo.name, token="", files=get_files())
     captured = capsys.readouterr()
     assert captured.out.splitlines()[-1] == "Nothing to do!"
-
-
-def test_get_private_token(tmp_path):
-    token_path = tmp_path / "token"
-    token_path.write_text("file token", "utf8")
-    assert get_private_token({}) is None
-    assert get_private_token({"PRIVATE_REPO_ACCESS_TOKEN": "env token"}) == "env token"
-    assert get_private_token({"PRIVATE_TOKEN_PATH": str(token_path)}) == "file token"
-    assert get_private_token({"PRIVATE_TOKEN_PATH": "/notexist"}) is None
-    assert (
-        get_private_token(
-            {
-                "PRIVATE_REPO_ACCESS_TOKEN": "env token",
-                "PRIVATE_TOKEN_PATH": str(token_path),
-            }
-        )
-        == "env token"
-    )
 
 
 def test_find_manifest(tmp_path):
