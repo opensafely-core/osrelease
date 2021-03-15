@@ -12,7 +12,7 @@ import urllib
 import urllib.parse
 from pathlib import Path
 
-from publisher.config import get_private_github_token
+from publisher.config import get_config_value
 
 
 class RedactingStreamHandler(logging.StreamHandler):
@@ -193,11 +193,10 @@ def run():
             sys.exit("Invalid url: must start with https://github.com/opensafely/")
     else:
         options.study_repo_url = manifest["repo"]
-    private_token = get_private_github_token()
+    private_token = get_config_value("PRIVATE_REPO_ACCESS_TOKEN")
     if not private_token:
         sys.exit(
-            "Could not load private token from "
-            "PRIVATE_REPO_ACCESS_TOKEN or PRIVATE_TOKEN_PATH"
+            "Could not load PRIVATE_REPO_ACCESS_TOKEN token from config file"
         )
 
     files = get_files()

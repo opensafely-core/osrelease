@@ -9,18 +9,19 @@ def get_config_file(env, filename="osrelease_config.py"):
     needing users to have specific environment variables set.
     """
     lookup = [
+        # explicit env var
+        Path(env.get("OSRELEASE_CONFIG", "doesnotexist.osrelease")),
         # current dir
-        Path(os.getcwd()),
+        Path(os.getcwd()) / filename,
         # virtualenv directory
-        Path(env.get("VIRTUAL_ENV", "doesnotexist.osrelease")),
-        # moduel directory
-        Path(__file__).parent,
+        Path(env.get("VIRTUAL_ENV", "doesnotexist.osrelease")) / filename,
+        # module directory
+        Path(__file__).parent / filename,
     ]
 
     for path in lookup:
-        config = path / filename
-        if config.exists():
-            return config
+        if path.exists():
+            return path
 
 
 def get_config(env=os.environ):
@@ -31,6 +32,8 @@ def get_config(env=os.environ):
     return config
 
 
-def get_private_github_token(env=os.environ):
+def get_config_value(name, env=os.environ):
     config = get_config(env)
-    return config.get("PRIVATE_REPO_ACCESS_TOKEN", "").strip()
+    if name in config:
+        return config[name]
+    return None
