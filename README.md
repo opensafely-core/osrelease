@@ -18,8 +18,8 @@ The proposed model is as follows:
 * The outputs for a single workspace are stored in a per-workspace folder
 * This folder should be maintained as a local git repo (which we'll call the *redaction repo*). The redaction repos will never leave the server: it only exists for reviewers to track redaction activity over time. The git history may, therefore, contain identifying information.
 * Whenever new outputs are generated in the workspace folder, a reviewer will use their usual git tools (typically Github Desktop) to examine the outputs. Outputs intended for public release should be redacted (as necessary) and then committed to the redaction repo.
-* The `report.py` script should then be run in a command terminal, from the root folder of the workspace folder. It:
-  * prompts the review for the URL of a github repo to where the redacted outputs should be published (the *study repo*)
+* The `osrelease` script should then be run in a command terminal, from the root folder of the workspace folder. It:
+  * finds the URL of the github repo to where the redacted outputs should be published (the *study repo*)
   * checks out the *study repo* and creates a branch `release-candidates` (if it doesn't already exist)
   * copies every file that has been committed to the *redaction repo* into a subfolder `released_outputs`
   * creates or updates an index file at `released_outputs/README.md` with links to all the release files
@@ -44,7 +44,7 @@ should be applied.
 * Run `git add` to add any new files, or changes from any existing files, to the local repo
 * Edit files to redact, as necessary
 * Commit any edits you make
-* Run `osrelease <github_remote_https_url>` (e.g. `osrelease https://github.com/opensafely/my-amazing-research`)
+* Run `osrelease`
 * Follow the instructions. It will only publish files you have committed locally, and won't send any intermediate history; just their state as they currently are in the local repo
 
 
@@ -62,9 +62,11 @@ should be applied.
  
     /d/osrelease/Scripts/pip install -e /d/output-publisher
 
-* Put git hub token in /d/osrelease/token
+* Configure
+  
+    Add the github private repo token to /d/osrelease/osrelease_config.py: 'PRIVATE_REPO_ACCESS_TOKEN="<token>"'
 
-* Work with TPP to ensure /d/osrelease/Scripts on system PATH, and envvar PRIVATE_TOKEN_PATH=/d/osrelease/token is in the system environment.
+* Work with TPP to ensure /d/osrelease/Scripts on system PATH
 
 
 ## Updating
