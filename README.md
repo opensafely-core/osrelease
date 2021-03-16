@@ -46,6 +46,7 @@ should be applied.
 * Commit any edits you make
 * Run `osrelease`
 * Follow the instructions. It will only publish files you have committed locally, and won't send any intermediate history; just their state as they currently are in the local repo
+* To use the new publishing method (publishing to job-server rather than github repo), run `osrelease -n`.
 
 
 ## Installing on TPP level 4 server
