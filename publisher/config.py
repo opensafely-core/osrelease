@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 
@@ -13,10 +14,11 @@ def get_config_file(env, filename="osrelease_config.py"):
         Path(env.get("OSRELEASE_CONFIG", "doesnotexist.osrelease")),
         # current dir
         Path(os.getcwd()) / filename,
-        # virtualenv directory
+        # explicit virtualenv directory
         Path(env.get("VIRTUAL_ENV", "doesnotexist.osrelease")) / filename,
-        # module directory
-        Path(__file__).parent / filename,
+        # implicit virtualenv directory, assuming argv[0] is the entrypoint in
+        # $VIRTUALENV/bin/osrelease
+        Path(sys.executable).parent.parent / filename,
     ]
 
     for path in lookup:

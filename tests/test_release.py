@@ -3,11 +3,7 @@ import os
 import pathlib
 import subprocess
 
-from publisher.release import (
-    main,
-    get_files,
-    find_manifest,
-)
+from publisher.release import find_manifest, get_files, main
 
 # Fixtures for these tests:
 #
