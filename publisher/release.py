@@ -12,6 +12,7 @@ import urllib.parse
 from pathlib import Path
 
 from publisher.config import get_config_value
+
 from . import upload
 
 

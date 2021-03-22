@@ -2,13 +2,10 @@ import json
 import os
 import pathlib
 import subprocess
+import sys
 
 import publisher.config
-from publisher.config import (
-    get_config,
-    get_config_value
-)
-
+from publisher.config import get_config, get_config_value
 
 
 def test_config_osrelease_config_env_var(tmp_path):
@@ -38,8 +35,9 @@ def test_config_file_venv(tmp_path):
 
 def test_config_file_module(tmp_path, monkeypatch):
     config = tmp_path / "osrelease_config.py"
+    executable = tmp_path / "bin" / "python"
+    monkeypatch.setattr(sys, "executable", str(executable))
     config.write_text("FOO=1")
-    monkeypatch.setattr(publisher.config, '__file__', str(tmp_path / 'config.py') )
     assert get_config({}) == {"FOO": 1}
 
 

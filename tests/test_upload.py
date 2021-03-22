@@ -49,12 +49,12 @@ class UrlopenFixture:
 
     class socket:
         """Minimal socket api as used by HTTPResponse"""
+
         def __init__(self, data):
             self.stream = io.BytesIO(data)
 
         def makefile(self, mode):
             return self.stream
-
 
     def set_response(self, status, headers={}, body=None):
         """Create a HTTP response byte-stream to be parsed by HTTPResponse."""
