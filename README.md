@@ -17,15 +17,15 @@ The proposed model is as follows:
 
 * The outputs for a single workspace are stored in a per-workspace folder
 * This folder should be maintained as a local git repo (which we'll call the *redaction repo*). The redaction repos will never leave the server: it only exists for reviewers to track redaction activity over time. The git history may, therefore, contain identifying information.
-* Whenever new outputs are generated in the workspace folder, a reviewer will use their usual git tools (typically Github Desktop) to examine the outputs. Outputs intended for public release should be redacted (as necessary) and then committed to the redaction repo.
+* Whenever new outputs are generated in the workspace folder, a reviewer will use their usual git tools (typically GitHub Desktop) to examine the outputs. Outputs intended for public release should be redacted (as necessary) and then committed to the redaction repo.
 * The `osrelease` script should then be run in a command terminal, from the root folder of the workspace folder. It:
-  * finds the URL of the github repo to where the redacted outputs should be published (the *study repo*)
+  * finds the URL of the GitHub repo to where the redacted outputs should be published (the *study repo*)
   * checks out the *study repo* and creates a branch `release-candidates` (if it doesn't already exist)
   * copies every file that has been committed to the *redaction repo* into a subfolder `released_outputs`
   * creates or updates an index file at `released_outputs/README.md` with links to all the release files
   * adds all new changes as a single commit, using the most recent commit message in the *redaction repo* as the text. It also appends a trailer indicating from where the commit was originated
   * force-pushes `release-candidates` to the study repo
-  * outputs a URL to the "create Pull Request" page in github for the `release-candidates` branch of the study repo
+  * outputs a URL to the "create Pull Request" page in GitHub for the `release-candidates` branch of the study repo
 
 The benefit of maintaining a separate *redaction repo* is that when new outputs
 are generated and written to that repo, the usual git tools can be used to diff
@@ -46,32 +46,32 @@ should be applied.
 * Commit any edits you make
 * Run `osrelease`
 * Follow the instructions. It will only publish files you have committed locally, and won't send any intermediate history; just their state as they currently are in the local repo
-* To use the new publishing method (publishing to job-server rather than github repo), run `osrelease -n`.
+* To use the new publishing method (publishing to job-server rather than GitHub repo), run `osrelease -n`.
 
 
 ## Installing on TPP level 4 server
 
 * Create or update a checkout 
 
-    git clone https://github.com/opensafely/output-publisher /d/output-publisher
+    `git clone https://github.com/opensafely/output-publisher /d/output-publisher`
 
 * Create venv at `/d/osrelease`
 
-    /c/Program\ Files\Python39.exe -m pyenv /d/osrelease
+    `/c/Program\ Files\Python39.exe -m pyenv /d/osrelease`
 
 * Install into venv
  
-    /d/osrelease/Scripts/pip install -e /d/output-publisher
+    `/d/osrelease/Scripts/pip install -e /d/output-publisher`
 
 * Configure
   
-    Add the github private repo token to /d/osrelease/osrelease_config.py: 'PRIVATE_REPO_ACCESS_TOKEN="<token>"'
+    Add the GitHub private repo token to `/d/osrelease/osrelease_config.py`: `PRIVATE_REPO_ACCESS_TOKEN="<token>"`
 
-* Work with TPP to ensure /d/osrelease/Scripts on system PATH
+* Work with TPP to ensure `/d/osrelease/Scripts` on system PATH
 
 
 ## Updating
 
 * Update checkout
 
-    cd /d/output-publisher && git pull
+    `cd /d/output-publisher && git pull`
