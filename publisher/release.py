@@ -196,7 +196,9 @@ def run():
     manifest = find_manifest(release_dir)
 
     if manifest is None:
-        sys.exit("Could not find metadata/manifest.json - are you in a workspace directory?")
+        sys.exit(
+            "Could not find metadata/manifest.json - are you in a workspace directory?"
+        )
 
     if options.new_publish:
         backend_token = get_config_value("BACKEND_TOKEN")
@@ -210,9 +212,7 @@ def run():
             options.study_repo_url = manifest["repo"]
         private_token = get_config_value("PRIVATE_REPO_ACCESS_TOKEN")
         if not private_token:
-            sys.exit(
-                "Could not load PRIVATE_REPO_ACCESS_TOKEN token from config file"
-            )
+            sys.exit("Could not load PRIVATE_REPO_ACCESS_TOKEN token from config file")
 
     files = get_files()
 

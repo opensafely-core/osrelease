@@ -12,8 +12,8 @@ help:
 
 .PHONY: fix
 fix:
-	black .
-	isort .
+	black publisher tests
+	isort publisher tests
 
 .PHONY: format
 format:
