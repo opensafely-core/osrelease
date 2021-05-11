@@ -15,6 +15,8 @@ from publisher.config import get_config_value
 
 from . import upload
 
+GITHUB_PROXY_DOMAIN = "github-proxy.opensafely.org"
+
 
 class RedactingStreamHandler(logging.StreamHandler):
     def emit(self, record):
@@ -38,7 +40,9 @@ def add_github_auth_to_repo(repo, token):
     if "github.com" in repo:
         parts = urllib.parse.urlparse(repo)
         assert not parts.username and not parts.password
-        repo = urllib.parse.urlunparse(parts._replace(netloc=f"{token}@{parts.netloc}"))
+        repo = urllib.parse.urlunparse(
+            parts._replace(netloc=f"{token}@{GITHUB_PROXY_DOMAIN}")
+        )
     return repo
 
 
@@ -108,7 +112,9 @@ def main(study_repo_url, token, files):
             try:
                 run_cmd(["git", "clone", study_repo_url_with_pat, "repo"])
             except subprocess.CalledProcessError:
-                raise RuntimeError(f"Unable to clone {study_repo_url}")
+                raise RuntimeError(
+                    f"Unable to clone {study_repo_url} via {GITHUB_PROXY_DOMAIN}"
+                )
 
             logger.debug(f"Checked out {study_repo_url} to repo/")
             os.chdir("repo")
