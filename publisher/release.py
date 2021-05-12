@@ -1,4 +1,5 @@
 import argparse
+import getpass
 import json
 import logging
 import os
@@ -215,6 +216,15 @@ def run():
             sys.exit("Could not load PRIVATE_REPO_ACCESS_TOKEN token from config file")
 
     files = get_files()
+
+    username = getpass.getuser()
+    allowed_usernames = get_config_value("ALLOWED_USERS")
+    if username not in allowed_usernames:
+        sys.stderr.write(
+            "Only members of the core OpenSAFELY team can publish outputs. "
+            "Please email disclosurecontrol@opensafely.org to request a release.\n"
+        )
+        sys.exit(1)
 
     if not options.yes:
         print("\n".join(str(f) for f in files))
