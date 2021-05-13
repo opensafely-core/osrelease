@@ -1,11 +1,7 @@
 import io
 import json
 import os
-import subprocess
-import urllib.request
-from datetime import datetime
 from http import HTTPStatus
-from http.client import HTTPResponse
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -13,6 +9,8 @@ import pytest
 
 import publisher.upload
 from publisher.upload import hash_files, main
+
+from .utils import UrlopenFixture
 
 
 @pytest.fixture
@@ -39,48 +37,6 @@ def release_files(release_dir):
         path.write_text(contents)
 
     return [Path(f) for f in files]
-
-
-class UrlopenFixture:
-    """Fixture for mocking urlopen."""
-
-    request = None
-    response = None
-
-    class socket:
-        """Minimal socket api as used by HTTPResponse"""
-
-        def __init__(self, data):
-            self.stream = io.BytesIO(data)
-
-        def makefile(self, mode):
-            return self.stream
-
-    def set_response(self, status, headers={}, body=None):
-        """Create a HTTP response byte-stream to be parsed by HTTPResponse."""
-        lines = [f"HTTP/1.1 {status.value} {status.phrase}"]
-        lines.append(f"Date: {datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S')}")
-        lines.append("Server: TestServer/1.0")
-        for name, value in headers.items():
-            lines.append(f"{name}: {value}")
-
-        if body:
-            lines.append(f"Content-Length: {len(body)}")
-            lines.append("")
-            lines.append("")
-
-        data = ("\r\n".join(lines)).encode("ascii")
-        if body:
-            data += body.encode("utf8")
-
-        self.sock = self.socket(data)
-
-    def urlopen(self, request):
-        """Replacement urlopen function."""
-        self.request = request
-        self.response = HTTPResponse(self.sock, method=request.method)
-        self.response.begin()
-        return self.response
 
 
 @pytest.fixture

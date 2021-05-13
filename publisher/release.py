@@ -14,7 +14,7 @@ from pathlib import Path
 
 from publisher.config import get_config_value
 
-from . import upload
+from . import notify, upload
 
 GITHUB_PROXY_DOMAIN = "github-proxy.opensafely.org"
 
@@ -194,18 +194,18 @@ def run():
     options = parser.parse_args()
 
     release_dir = Path(os.getcwd())
-    manifest = find_manifest(release_dir)
 
+    manifest = find_manifest(release_dir)
     if manifest is None:
         sys.exit(
             "Could not find metadata/manifest.json - are you in a workspace directory?"
         )
 
-    if options.new_publish:
-        backend_token = get_config_value("BACKEND_TOKEN")
-        if not backend_token:
-            sys.exit("Could not load BACKEND_TOKEN from config")
-    else:
+    backend_token = get_config_value("BACKEND_TOKEN")
+    if not backend_token:
+        sys.exit("Could not load BACKEND_TOKEN from config")
+
+    if not options.new_publish:
         if options.study_repo_url:
             if not options.study_repo_url.startswith("https://github.com/opensafely/"):
                 sys.exit("Invalid url: must start with https://github.com/opensafely/")
@@ -244,6 +244,14 @@ def run():
             )
         else:
             main(options.study_repo_url, private_token, files)
+    except Exception as exc:
+        if options.verbose > 0:
+            raise
+        sys.exit(exc)
+
+    # notify job-server that outputs have been released
+    try:
+        notify.main(username, backend_token, Path(os.getcwd()))
     except Exception as exc:
         if options.verbose > 0:
             raise
