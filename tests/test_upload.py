@@ -121,8 +121,9 @@ def test_main_success(release_dir, release_files, urlopen, capsys):
 
     main(release_dir, release_files, manifest, "token")
 
+    JOB_SERVER = os.environ.get("JOB_SERVER", "https://jobs.opensafely.org")
     assert urlopen.request.full_url == (
-        f"https://jobs.opensafely.org/api/v2/workspaces/workspace/releases/{release_hash}"
+        f"{JOB_SERVER}/api/v2/workspaces/workspace/releases/{release_hash}"
     )
     assert urlopen.request.headers["Authorization"] == "token"
 
