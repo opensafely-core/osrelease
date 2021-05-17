@@ -251,7 +251,7 @@ def run():
 
     # notify job-server that outputs have been released
     try:
-        notify.main(username, backend_token, Path(os.getcwd()))
+        notify.main(username, backend_token, os.getcwd())
     except Exception as exc:
         if options.verbose > 0:
             raise
