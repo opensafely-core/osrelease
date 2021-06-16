@@ -21,7 +21,7 @@ GITHUB_PROXY_DOMAIN = "github-proxy.opensafely.org"
 
 class RedactingStreamHandler(logging.StreamHandler):
     def emit(self, record):
-        record.msg = re.sub(r"(.*://)[a-z0-9]+", r"\1xxxxxx", record.msg)
+        record.msg = re.sub(r"(.*://).+@", r"\1xxxxxx@", record.msg)
         super().emit(record)
 
 
@@ -167,6 +167,18 @@ def main(study_repo_url, token, files):
             os.chdir(repo_dir)
 
 
+def get_current_user():
+    # this works for windows and linux users
+    username = getpass.getuser()
+
+    # due to current permissions in in linux backends, we have to release as the shared jobrunner user.
+    # to preserve audit, use logname(1) to get the real user connected to the tty
+    if username == "jobrunner":
+        username = subprocess.check_output(["logname"], text=True).strip()
+
+    return username
+
+
 def find_manifest(path):
     manifest_path = path / "metadata/manifest.json"
     if manifest_path.exists():
@@ -217,7 +229,7 @@ def run():
 
     files = get_files()
 
-    username = getpass.getuser()
+    username = get_current_user()
     allowed_usernames = get_config_value("ALLOWED_USERS")
     if username not in allowed_usernames:
         sys.stderr.write(

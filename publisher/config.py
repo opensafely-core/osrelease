@@ -19,6 +19,8 @@ def get_config_file(env, filename="osrelease_config.py"):
         # implicit virtualenv directory, assuming argv[0] is the entrypoint in
         # $VIRTUALENV/bin/osrelease
         Path(sys.executable).parent.parent / filename,
+        # backend install
+        Path("/srv/osrelease/environ/osrelease_config.py"),
     ]
 
     for path in lookup:
