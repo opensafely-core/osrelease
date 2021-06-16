@@ -109,6 +109,8 @@ def test_get_current_user(monkeypatch):
     monkeypatch.setattr('publisher.release.getpass.getuser', lambda: "user")
     assert get_current_user() == "user"
 
-    monkeypatch.setattr('publisher.release.getpass.getuser', lambda: "jobrunner")
-    assert get_current_user() == real_user
+
+    if 'GITHUB_ACTIONS' not in os.environ:
+        monkeypatch.setattr('publisher.release.getpass.getuser', lambda: "jobrunner")
+        assert get_current_user() == real_user
     
