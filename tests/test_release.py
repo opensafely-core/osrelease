@@ -1,9 +1,12 @@
+import getpass
 import json
+import logging
 import os
 import pathlib
 import subprocess
 
-from publisher.release import find_manifest, get_files, main
+from publisher.release import (RedactingStreamHandler, find_manifest,
+                               get_current_user, get_files, main)
 
 # Fixtures for these tests:
 #
@@ -83,3 +86,31 @@ def test_find_manifest_not_found(tmp_path):
     workdir = tmp_path / "release"
     workdir.mkdir()
     assert find_manifest(workdir) is None
+
+
+def test_redacting_logger(capsys):
+
+    logger = logging.getLogger(__name__ + ".test_redacting_logger")
+    logger.setLevel(logging.DEBUG)
+    ch = RedactingStreamHandler()
+    ch.setLevel(logging.DEBUG)
+    logger.addHandler(ch)
+    logger.info("https://token@github-proxy.opensafely.org")
+
+
+    _, err = capsys.readouterr()
+
+    assert err == "https://xxxxxx@github-proxy.opensafely.org\n"
+
+
+def test_get_current_user(monkeypatch):
+    real_user = getpass.getuser()
+
+    monkeypatch.setattr('publisher.release.getpass.getuser', lambda: "user")
+    assert get_current_user() == "user"
+
+
+    if 'GITHUB_ACTIONS' not in os.environ:
+        monkeypatch.setattr('publisher.release.getpass.getuser', lambda: "jobrunner")
+        assert get_current_user() == real_user
+    
