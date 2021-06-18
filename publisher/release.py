@@ -174,7 +174,11 @@ def get_current_user():
     # due to current permissions in in linux backends, we have to release as the shared jobrunner user.
     # to preserve audit, use logname(1) to get the real user connected to the tty
     if username == "jobrunner":
-        username = subprocess.check_output(["logname"], text=True).strip()
+        try:
+            username = subprocess.check_output(["logname"], text=True).strip()
+        except subprocess.CalledProcessError:
+            # logname doesn't work in GH actions where it's in an interactive shell with a tty.
+            pass
 
     return username
 
