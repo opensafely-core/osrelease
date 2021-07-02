@@ -1,4 +1,7 @@
+import getpass
+import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -36,8 +39,95 @@ def get_config(env=os.environ):
     return config
 
 
-def get_config_value(name, env=os.environ):
-    config = get_config(env)
-    if name in config:
-        return config[name]
-    return None
+def git_files(git_dir):
+    old = os.getcwd()
+    try:
+        os.chdir(git_dir)
+        return [
+            Path(x)
+            for x in subprocess.check_output(
+                ["git", "ls-tree", "-r", "HEAD", "--name-only"], encoding="utf8"
+            ).splitlines()
+        ]
+    finally:
+        os.chdir(old)
+
+
+def get_current_user():
+    # this works for windows and linux users
+    username = getpass.getuser()
+
+    # due to current permissions in linux backends, we have to release as the shared jobrunner user.
+    # to preserve audit, use logname(1) to get the real user connected to the tty
+    if username == "jobrunner":
+        try:
+            username = subprocess.check_output(["logname"], text=True).strip()
+        except subprocess.CalledProcessError:
+            # logname doesn't work in GH actions where it's in an interactive shell with a tty.
+            pass
+
+    return username
+
+
+def find_manifest(path):
+    manifest_path = path / "metadata/manifest.json"
+    if manifest_path.exists():
+        try:
+            manifest = json.load(manifest_path.open())
+        except json.JSONDecodeError as exc:
+            raise Exception(f"Could not load metadata/manifest.json - {exc}")
+        else:
+            return manifest
+
+
+def load_config(options, release_dir, env=os.environ):
+
+    cfg = get_config(env=env)
+    manifest = find_manifest(release_dir)
+    if manifest is None:
+        sys.exit(
+            "Could not find metadata/manifest.json - are you in a workspace directory?"
+        )
+
+    files = [Path(f) for f in options.files]
+    not_exist = [p for p in files if not p.exists()]
+    if not_exist:
+        filelist = ", ".join(str(s) for s in not_exist)
+        sys.exit(f"Files do not exist: {filelist}")
+
+    config = {
+        "backend_token": cfg.get("BACKEND_TOKEN"),
+        "private_token": cfg.get("PRIVATE_REPO_ACCESS_TOKEN"),
+        "study_repo_url": manifest["repo"],
+        "workspace": manifest["workspace"],
+        "username": get_current_user(),
+    }
+
+    if not config["backend_token"]:
+        sys.exit("Could not load BACKEND_TOKEN from config")
+
+    if options.new_publish:
+        # must provide files in new publish
+        if not files:
+            sys.exit("No files provided to release")
+    else:
+        # deprecated github publishing
+        config["study_repo_url"] = manifest["repo"]
+        if not config["private_token"]:
+            sys.exit("Could not load PRIVATE_REPO_ACCESS_TOKEN token from config file")
+
+        if not files:
+            if Path(".git").exists():
+                print("Found git repo, using deprecated git release flow.")
+                files = git_files(release_dir)
+            else:
+                sys.exit("No files provided to release")
+
+    allowed_usernames = cfg.get("ALLOWED_USERS", [])
+    if config["username"] not in allowed_usernames:
+        sys.exit(
+            "Only members of the core OpenSAFELY team can publish outputs. "
+            "Please email disclosurecontrol@opensafely.org to request a release.\n"
+        )
+
+    return files, config

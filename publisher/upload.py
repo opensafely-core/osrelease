@@ -24,11 +24,10 @@ def hash_files(release_dir, files):
 JOB_SERVER = os.environ.get("JOB_SERVER", "https://jobs.opensafely.org")
 
 
-def main(release_dir, files, manifest, token):
+def main(release_dir, files, workspace, token):
     # include the manifest in the release
     files.append(Path("metadata/manifest.json"))
     release_hash = hash_files(release_dir, files)
-    workspace = manifest["workspace"]
 
     zip_buffer = io.BytesIO()
     with ZipFile(zip_buffer, "w") as zip_file:

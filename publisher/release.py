@@ -1,6 +1,4 @@
 import argparse
-import getpass
-import json
 import logging
 import os
 import re
@@ -12,9 +10,7 @@ import tempfile
 import urllib.parse
 from pathlib import Path
 
-from publisher.config import get_config_value
-
-from . import notify, upload
+from . import config, notify, upload
 
 GITHUB_PROXY_DOMAIN = "github-proxy.opensafely.org"
 
@@ -85,15 +81,6 @@ def make_index(subdir):
         return "# Table of contents\n\n" + "\n".join(lines)
     else:
         return None
-
-
-def get_files():
-    return [
-        Path(x)
-        for x in subprocess.check_output(
-            ["git", "ls-tree", "-r", "HEAD", "--name-only"], encoding="utf8"
-        ).splitlines()
-    ]
 
 
 def main(study_repo_url, token, files):
@@ -167,112 +154,44 @@ def main(study_repo_url, token, files):
             os.chdir(repo_dir)
 
 
-def get_current_user():
-    # this works for windows and linux users
-    username = getpass.getuser()
-
-    # due to current permissions in in linux backends, we have to release as the shared jobrunner user.
-    # to preserve audit, use logname(1) to get the real user connected to the tty
-    if username == "jobrunner":
-        try:
-            username = subprocess.check_output(["logname"], text=True).strip()
-        except subprocess.CalledProcessError:
-            # logname doesn't work in GH actions where it's in an interactive shell with a tty.
-            pass
-
-    return username
-
-
-def find_manifest(path):
-    manifest_path = path / "metadata/manifest.json"
-    if manifest_path.exists():
-        try:
-            manifest = json.load(manifest_path.open())
-        except json.JSONDecodeError:
-            return None
-        else:
-            return manifest
-
-    # we've reached the top
-    if path.parent == path:
-        return None
-
-    # recurse upwards
-    return find_manifest(path.parent)
-
-
-def run():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--verbose", "-v", action="count", default=0)
-    parser.add_argument("--yes", "-t", action="store_true")
-    parser.add_argument("--new-publish", "-n", action="store_true")
-    parser.add_argument("study_repo_url", nargs="?")
-    options = parser.parse_args()
-
-    release_dir = Path(os.getcwd())
-
-    manifest = find_manifest(release_dir)
-    if manifest is None:
-        sys.exit(
-            "Could not find metadata/manifest.json - are you in a workspace directory?"
-        )
-
-    backend_token = get_config_value("BACKEND_TOKEN")
-    if not backend_token:
-        sys.exit("Could not load BACKEND_TOKEN from config")
-
-    if not options.new_publish:
-        if options.study_repo_url:
-            if not options.study_repo_url.startswith("https://github.com/opensafely/"):
-                sys.exit("Invalid url: must start with https://github.com/opensafely/")
-        else:
-            options.study_repo_url = manifest["repo"]
-        private_token = get_config_value("PRIVATE_REPO_ACCESS_TOKEN")
-        if not private_token:
-            sys.exit("Could not load PRIVATE_REPO_ACCESS_TOKEN token from config file")
-
-    files = get_files()
-
-    username = get_current_user()
-    allowed_usernames = get_config_value("ALLOWED_USERS")
-    if username not in allowed_usernames:
-        sys.stderr.write(
-            "Only members of the core OpenSAFELY team can publish outputs. "
-            "Please email disclosurecontrol@opensafely.org to request a release.\n"
-        )
-        sys.exit(1)
-
-    if not options.yes:
-        print("\n".join(str(f) for f in files))
-        print()
-        if input("The above files will be published. Continue? (y/N)").lower() != "y":
-            sys.exit()
-
+def run(options, release_dir):
     try:
+        files, cfg = config.load_config(options, release_dir)
+
+        if not options.yes:
+            print("\n".join(str(f) for f in files))
+            print()
+            if (
+                input("The above files will be published. Continue? (y/N)").lower()
+                != "y"
+            ):
+                sys.exit()
+
         if options.new_publish:
-            sys.exit(
-                upload.main(
-                    release_dir,
-                    files,
-                    manifest,
-                    backend_token,
-                )
+            upload.release(
+                release_dir,
+                files,
+                cfg["workspace"],
+                cfg["backend_token"],
             )
         else:
-            main(options.study_repo_url, private_token, files)
+            main(config["study_repo_url"], cfg["private_token"], files)
+
+        notify.main(config["username"], cfg["backend_token"], release_dir)
+
     except Exception as exc:
         if options.verbose > 0:
             raise
         sys.exit(exc)
 
-    # notify job-server that outputs have been released
-    try:
-        notify.main(username, backend_token, os.getcwd())
-    except Exception as exc:
-        if options.verbose > 0:
-            raise
-        sys.exit(exc)
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--verbose", "-v", action="count", default=0)
+parser.add_argument("--yes", "-t", action="store_true")
+parser.add_argument("--new-publish", "-n", action="store_true")
+parser.add_argument("files", nargs="*")
 
 
 if __name__ == "__main__":
-    run()
+    options = parser.parse_args()
+    run(options, Path(os.getcwd()))

@@ -30,7 +30,6 @@ def release_files(release_dir):
         "outputs/data.csv": "data",
     }
 
-    filepaths = []
     for name, contents in files.items():
         path = release_dir / name
         path.parent.mkdir(exist_ok=True, parents=True)
@@ -71,11 +70,11 @@ def test_main_success(release_dir, release_files, urlopen, capsys):
             "Location": "/location",
         },
     )
-    manifest = write_manifest(release_dir, workspace="workspace")
+    write_manifest(release_dir, workspace="workspace")
     # the hash for these test files + manifest contents
     release_hash = "d30535e1a8f6d000f1ed1a58ba5b9af1"
 
-    main(release_dir, release_files, manifest, "token")
+    main(release_dir, release_files, "workspace", "token")
 
     JOB_SERVER = os.environ.get("JOB_SERVER", "https://jobs.opensafely.org")
     assert urlopen.request.full_url == (
@@ -99,9 +98,9 @@ def test_main_redirect(release_dir, release_files, urlopen, capsys):
             "Location": "/location",
         },
     )
-    manifest = write_manifest(release_dir, workspace="workspace")
+    write_manifest(release_dir, workspace="workspace")
 
-    main(release_dir, release_files, manifest, "token")
+    main(release_dir, release_files, "workspace", "token")
 
     out, err = capsys.readouterr()
     assert out == "Release already uploaded at /location\n"
