@@ -6,6 +6,8 @@ import tempfile
 
 import pytest
 
+from publisher import release
+
 
 def git_init():
     subprocess.check_call(["git", "init"])
@@ -58,3 +60,8 @@ def study_repo():
     os.chdir(d.name)
     git_init()
     return d
+
+
+@pytest.fixture
+def options():
+    return release.parser.parse_args([])
