@@ -91,9 +91,9 @@ def test_redacting_logger(capsys):
     assert err == "https://xxxxxx@github-proxy.opensafely.org\n"
 
 
-def test_run_no_args(tmp_path):
+def test_releaseno_args(tmp_path):
     options = release.parser.parse_args([])
     with pytest.raises(SystemExit) as ctx:
-        release.run(options, tmp_path)
+        release.release(options, tmp_path)
 
     assert "Could not find metadata/manifest.json" in str(ctx.value)

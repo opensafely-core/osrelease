@@ -154,7 +154,7 @@ def main(study_repo_url, token, files):
             os.chdir(repo_dir)
 
 
-def run(options, release_dir):
+def release(options, release_dir):
     try:
         files, cfg = config.load_config(options, release_dir)
 
@@ -192,6 +192,10 @@ parser.add_argument("--new-publish", "-n", action="store_true")
 parser.add_argument("files", nargs="*")
 
 
-if __name__ == "__main__":
+def run():
     options = parser.parse_args()
     run(options, Path(os.getcwd()))
+
+
+if __name__ == "__main__":
+    run()
