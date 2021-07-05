@@ -194,7 +194,7 @@ parser.add_argument("files", nargs="*")
 
 def run():
     options = parser.parse_args()
-    run(options, Path(os.getcwd()))
+    release(options, Path(os.getcwd()))
 
 
 if __name__ == "__main__":
