@@ -92,6 +92,7 @@ def main(study_repo_url, token, files):
     release_branch = "release-candidates"
     release_subdir = Path("released_outputs")
     repo_dir = Path(os.getcwd())
+    released = False
     with tempfile.TemporaryDirectory() as d:
         try:
             os.chdir(d)
@@ -144,6 +145,7 @@ def main(study_repo_url, token, files):
                         "Pushed new changes. Open a PR at "
                         f"`{study_repo_url.replace('.git', '')}/compare/{release_branch}`"
                     )
+                    released = True
                 else:
                     print("Nothing to do!")
             else:
@@ -152,6 +154,8 @@ def main(study_repo_url, token, files):
             # ensure we do not maintain an open handle on the temp dir, or else
             # the clean up fails
             os.chdir(repo_dir)
+
+        return released
 
 
 def release(options, release_dir):
@@ -168,16 +172,18 @@ def release(options, release_dir):
                 sys.exit()
 
         if options.new_publish:
-            upload.release(
+            released = upload.release(
                 release_dir,
                 files,
                 cfg["workspace"],
                 cfg["backend_token"],
+                cfg["username"],
             )
         else:
-            main(config["study_repo_url"], cfg["private_token"], files)
+            released = main(cfg["study_repo_url"], cfg["private_token"], files)
 
-        notify.main(config["username"], cfg["backend_token"], release_dir)
+        if released:
+            notify.main(cfg["username"], cfg["backend_token"], str(release_dir))
 
     except Exception as exc:
         if options.verbose > 0:

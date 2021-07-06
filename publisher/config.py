@@ -71,16 +71,36 @@ def get_current_user():
 
 def find_manifest(path):
     manifest_path = path / "metadata/manifest.json"
+    manifest = None
     if manifest_path.exists():
         try:
             manifest = json.load(manifest_path.open())
         except json.JSONDecodeError as exc:
             raise Exception(f"Could not load metadata/manifest.json - {exc}")
-        else:
-            return manifest
+
+    if manifest is not None:
+        if "repo" not in manifest:
+            raise Exception(f"Invalid manifest {manifest_path} - no repo")
+        if "workspace" not in manifest:
+            raise Exception(f"Invalid manifest {manifest_path} - no workspace")
+
+    return manifest
+
+
+def ensure_git_config():
+    try:
+        subprocess.check_output(["git", "config", "--global", "user.name"])
+        subprocess.check_output(["git", "config", "--global", "user.email"])
+    except subprocess.CalledProcessError:
+        print(
+            "You need to tell git who you are by running:\n\n"
+            'git config --global user.name "YOUR NAME"\n'
+            'git config --global user.email "YOUR EMAIL"'
+        )
 
 
 def load_config(options, release_dir, env=os.environ):
+    ensure_git_config()
 
     cfg = get_config(env=env)
     manifest = find_manifest(release_dir)

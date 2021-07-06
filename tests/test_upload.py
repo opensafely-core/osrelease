@@ -74,7 +74,7 @@ def test_main_success(release_dir, release_files, urlopen, capsys):
     # the hash for these test files + manifest contents
     release_hash = "d30535e1a8f6d000f1ed1a58ba5b9af1"
 
-    main(release_dir, release_files, "workspace", "token")
+    main(release_dir, release_files, "workspace", "token", "user")
 
     JOB_SERVER = os.environ.get("JOB_SERVER", "https://jobs.opensafely.org")
     assert urlopen.request.full_url == (
@@ -100,7 +100,7 @@ def test_main_redirect(release_dir, release_files, urlopen, capsys):
     )
     write_manifest(release_dir, workspace="workspace")
 
-    main(release_dir, release_files, "workspace", "token")
+    main(release_dir, release_files, "workspace", "token", "user")
 
     out, err = capsys.readouterr()
     assert out == "Release already uploaded at /location\n"
@@ -115,6 +115,6 @@ def test_main_error_response(release_dir, release_files, urlopen, capsys):
     manifest = write_manifest(release_dir, workspace="workspace")
 
     with pytest.raises(Exception) as exc_info:
-        main(release_dir, release_files, manifest, "token")
+        main(release_dir, release_files, manifest, "token", "user")
 
     assert str(exc_info.value) == "Error: 400 response from the server: ERROR MSG"
