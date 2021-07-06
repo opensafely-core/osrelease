@@ -24,7 +24,7 @@ def hash_files(release_dir, files):
 JOB_SERVER = os.environ.get("JOB_SERVER", "https://jobs.opensafely.org")
 
 
-def main(release_dir, files, workspace, token):
+def main(release_dir, files, workspace, token, user):
     # include the manifest in the release
     files.append(Path("metadata/manifest.json"))
     release_hash = hash_files(release_dir, files)
@@ -45,7 +45,7 @@ def main(release_dir, files, workspace, token):
             "Content-Type": "application/zip",
             "Content-Disposition": "attachment; filename=release.zip",
             "Authorization": token,
-            "Backend-User": getpass.getuser(),
+            "Backend-User": user,
         },
     )
 
@@ -59,7 +59,7 @@ def main(release_dir, files, workspace, token):
         location = response.headers["Location"]
         verb = "created" if response.status == 201 else "already uploaded"
         print(f"Release {verb} at {location}")
-        return
+        return response.status == 201
 
     error_msg = response.read().decode("utf8")
 
