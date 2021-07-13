@@ -6,8 +6,14 @@ from urllib.request import Request, urlopen
 JOB_SERVER = os.environ.get("JOB_SERVER", "https://jobs.opensafely.org")
 
 
-def main(username, token, path):
-    data = json.dumps({"created_by": username, "path": path}).encode("utf-8")
+def main(token, username, path, files):
+    data = json.dumps(
+        {
+            "created_by": username,
+            "path": path,
+            "files": files,
+        }
+    ).encode("utf-8")
 
     request = Request(
         url=f"{JOB_SERVER}/api/v2/release-notifications/",

@@ -25,9 +25,10 @@ def default_config(tmp_path, monkeypatch):
         tmp_path,
         BACKEND_TOKEN="token",
         PRIVATE_REPO_ACCESS_TOKEN="private",
-        ALLOWED_USERS=[getpass.getuser()],
+        ALLOWED_USERS={getpass.getuser(): "github-user"},
     )
     monkeypatch.setitem(os.environ, "OSRELEASE_CONFIG", env["OSRELEASE_CONFIG"])
+    return env
 
 
 def test_config_osrelease_config_env_var(tmp_path):
@@ -86,27 +87,38 @@ def test_load_config_files_not_exist(options, tmp_path):
 
 def test_load_config_no_backend_token(options, tmp_path):
     write_manifest(tmp_path)
+    env = write_config(
+        tmp_path,
+        PRIVATE_REPO_ACCESS_TOKEN="private",
+        ALLOWED_USERS={getpass.getuser(): "github-user"},
+    )
+    f = tmp_path / "test.txt"
+    f.write_text("test")
+    options.files = [str(f)]
 
     with pytest.raises(SystemExit) as exc_info:
-        config.load_config(options, tmp_path)
+        config.load_config(options, tmp_path, env=env)
 
     assert "Could not load BACKEND_TOKEN" in str(exc_info.value)
 
 
-def test_load_config_new_publish_no_files(options, tmp_path):
+def test_load_config_new_publish_no_files(options, default_config, tmp_path):
     write_manifest(tmp_path)
-    env = write_config(tmp_path, BACKEND_TOKEN="token")
     options.new_publish = True
 
     with pytest.raises(SystemExit) as exc_info:
-        config.load_config(options, tmp_path, env=env)
+        config.load_config(options, tmp_path)
 
     assert "No files provided to release" in str(exc_info.value)
 
 
 def test_load_config_old_publish_no_private_token(options, tmp_path):
     write_manifest(tmp_path)
-    env = write_config(tmp_path, BACKEND_TOKEN="token")
+    env = write_config(
+        tmp_path,
+        BACKEND_TOKEN="token",
+        ALLOWED_USERS={getpass.getuser(): "github-user"},
+    )
 
     with pytest.raises(SystemExit) as exc_info:
         config.load_config(options, tmp_path, env=env)
@@ -114,14 +126,11 @@ def test_load_config_old_publish_no_private_token(options, tmp_path):
     assert "Could not load PRIVATE" in str(exc_info.value)
 
 
-def test_load_config_old_publish_no_git(options, tmp_path):
+def test_load_config_old_publish_no_git(options, default_config, tmp_path):
     write_manifest(tmp_path)
-    env = write_config(
-        tmp_path, BACKEND_TOKEN="token", PRIVATE_REPO_ACCESS_TOKEN="private"
-    )
 
     with pytest.raises(SystemExit) as exc_info:
-        config.load_config(options, tmp_path, env=env)
+        config.load_config(options, tmp_path)
 
     assert "No files provided to release" in str(exc_info.value)
 
@@ -135,6 +144,27 @@ def test_load_config_username_not_allowed(options, tmp_path, monkeypatch):
     f.write_text("test")
     options.files = [str(f)]
     monkeypatch.setattr("publisher.config.getpass.getuser", lambda: "user")
+
+    with pytest.raises(SystemExit) as exc_info:
+        config.load_config(options, tmp_path, env=env)
+
+    assert "Only members of the core OpenSAFELY team" in str(exc_info.value)
+
+
+def test_load_config_username_allowed_users_list_still_blocks(
+    options, tmp_path, monkeypatch
+):
+    write_manifest(tmp_path)
+    env = write_config(
+        tmp_path,
+        BACKEND_TOKEN="token",
+        PRIVATE_REPO_ACCESS_TOKEN="private",
+        ALLOWED_USERS=["validuser"],
+    )
+    f = tmp_path / "file.txt"
+    f.write_text("test")
+    options.files = [str(f)]
+    monkeypatch.setattr("publisher.config.getpass.getuser", lambda: "invaliduser")
 
     with pytest.raises(SystemExit) as exc_info:
         config.load_config(options, tmp_path, env=env)
@@ -156,7 +186,7 @@ def test_load_config_new_publish(options, tmp_path, default_config):
         "private_token": "private",
         "study_repo_url": "repo",
         "workspace": "workspace",
-        "username": getpass.getuser(),
+        "username": "github-user",
     }
 
 
@@ -178,7 +208,7 @@ def test_load_config_new_publish_dirs(options, tmp_path, default_config):
         "private_token": "private",
         "study_repo_url": "repo",
         "workspace": "workspace",
-        "username": getpass.getuser(),
+        "username": "github-user",
     }
 
 
@@ -195,7 +225,7 @@ def test_load_config_old_publish_with_files(options, tmp_path, default_config):
         "private_token": "private",
         "study_repo_url": "repo",
         "workspace": "workspace",
-        "username": getpass.getuser(),
+        "username": "github-user",
     }
 
 
@@ -216,5 +246,5 @@ def test_load_config_old_publish_with_git(
         "private_token": "private",
         "study_repo_url": "repo",
         "workspace": "workspace",
-        "username": getpass.getuser(),
+        "username": "github-user",
     }
