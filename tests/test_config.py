@@ -84,7 +84,7 @@ def test_load_config_files_not_exist(options, tmp_path):
     assert "Files do not exist: notexist" in str(exc_info.value)
 
 
-def test_load_config_files_no_backend_token(options, tmp_path):
+def test_load_config_no_backend_token(options, tmp_path):
     write_manifest(tmp_path)
 
     with pytest.raises(SystemExit) as exc_info:
@@ -151,6 +151,28 @@ def test_load_config_new_publish(options, tmp_path, default_config):
 
     files, cfg = config.load_config(options, tmp_path)
     assert files == [f]
+    assert cfg == {
+        "backend_token": "token",
+        "private_token": "private",
+        "study_repo_url": "repo",
+        "workspace": "workspace",
+        "username": getpass.getuser(),
+    }
+
+
+def test_load_config_new_publish_dirs(options, tmp_path, default_config):
+    write_manifest(tmp_path)
+    d = tmp_path / "dir"
+    d.mkdir()
+    f1 = d / "file1.txt"
+    f1.write_text("test")
+    f2 = d / "file2.txt"
+    f2.write_text("test")
+    options.files = [str(d)]
+    options.new_publish = True
+
+    files, cfg = config.load_config(options, tmp_path)
+    assert files == [f1, f2]
     assert cfg == {
         "backend_token": "token",
         "private_token": "private",

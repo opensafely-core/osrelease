@@ -109,7 +109,14 @@ def load_config(options, release_dir, env=os.environ):
             "Could not find metadata/manifest.json - are you in a workspace directory?"
         )
 
-    files = [Path(f) for f in options.files]
+    files = []
+    for f in options.files:
+        path = Path(f)
+        if path.is_dir():
+            files.extend(path.glob("**/*"))
+        else:
+            files.append(path)
+
     not_exist = [p for p in files if not p.exists()]
     if not_exist:
         filelist = ", ".join(str(s) for s in not_exist)
