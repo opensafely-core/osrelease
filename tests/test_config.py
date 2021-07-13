@@ -172,7 +172,7 @@ def test_load_config_new_publish_dirs(options, tmp_path, default_config):
     options.new_publish = True
 
     files, cfg = config.load_config(options, tmp_path)
-    assert files == [f1, f2]
+    assert list(sorted(files)) == [f1, f2]
     assert cfg == {
         "backend_token": "token",
         "private_token": "private",
