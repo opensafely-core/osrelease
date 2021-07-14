@@ -122,12 +122,23 @@ def load_config(options, release_dir, env=os.environ):
         filelist = ", ".join(str(s) for s in not_exist)
         sys.exit(f"Files do not exist: {filelist}")
 
+    allowed_usernames = cfg.get("ALLOWED_USERS", {})
+    if isinstance(allowed_usernames, list):
+        allowed_usernames = {u: u for u in allowed_usernames}
+
+    local_username = getpass.getuser()
+    if local_username not in allowed_usernames:
+        sys.exit(
+            "Only members of the core OpenSAFELY team can publish outputs. "
+            "Please email disclosurecontrol@opensafely.org to request a release.\n"
+        )
+
     config = {
         "backend_token": cfg.get("BACKEND_TOKEN"),
         "private_token": cfg.get("PRIVATE_REPO_ACCESS_TOKEN"),
         "study_repo_url": manifest["repo"],
         "workspace": manifest["workspace"],
-        "username": get_current_user(),
+        "username": allowed_usernames[local_username],
     }
 
     if not config["backend_token"]:
@@ -149,12 +160,5 @@ def load_config(options, release_dir, env=os.environ):
                 files = git_files(release_dir)
             else:
                 sys.exit("No files provided to release")
-
-    allowed_usernames = cfg.get("ALLOWED_USERS", [])
-    if config["username"] not in allowed_usernames:
-        sys.exit(
-            "Only members of the core OpenSAFELY team can publish outputs. "
-            "Please email disclosurecontrol@opensafely.org to request a release.\n"
-        )
 
     return files, config

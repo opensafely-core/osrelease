@@ -183,7 +183,13 @@ def release(options, release_dir):
             released = main(cfg["study_repo_url"], cfg["private_token"], files)
 
         if released:
-            notify.main(cfg["username"], cfg["backend_token"], str(release_dir))
+
+            notify.main(
+                cfg["backend_token"],
+                cfg["username"],
+                str(release_dir),
+                [f.relative_to(release_dir) for f in files],
+            )
 
     except Exception as exc:
         if options.verbose > 0:
