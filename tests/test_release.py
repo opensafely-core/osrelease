@@ -18,7 +18,9 @@ from publisher import config, release
 def test_successful_push_message(capsys, release_repo, study_repo):
     os.chdir(release_repo.name)
     files = config.git_files(Path(release_repo.name))
-    release.main(study_repo_url=study_repo.name, token="", files=files)
+    release.main(
+        study_repo_url=study_repo.name, token="", files=files, commit_msg="msg"
+    )
     captured = capsys.readouterr()
 
     assert captured.out.startswith("Pushed new changes")
@@ -27,8 +29,10 @@ def test_successful_push_message(capsys, release_repo, study_repo):
 def test_release_repo_master_branch_unchanged(release_repo, study_repo):
     os.chdir(release_repo.name)
     files = config.git_files(Path(release_repo.name))
-    release.main(study_repo_url=study_repo.name, token="", files=files)
-    os.chdir(study_repo.name)
+    release.main(
+        study_repo_url=study_repo.name, token="", files=files, commit_msg="msg"
+    )
+    os.chdir(study_repo.name),
     committed = Path("released_outputs/a/b/committed.txt")
     staged = Path("released_outputs/a/b/staged.txt")
     unstaged = Path("released_outputs/a/b/unstaged.txt")
@@ -40,7 +44,9 @@ def test_release_repo_master_branch_unchanged(release_repo, study_repo):
 def test_release_repo_release_branch_changed(release_repo, study_repo):
     os.chdir(release_repo.name)
     files = config.git_files(Path(release_repo.name))
-    release.main(study_repo_url=study_repo.name, token="", files=files)
+    release.main(
+        study_repo_url=study_repo.name, token="", files=files, commit_msg="msg"
+    )
     os.chdir(study_repo.name)
     subprocess.check_output(["git", "checkout", "release-candidates"])
 
@@ -53,26 +59,15 @@ def test_release_repo_release_branch_changed(release_repo, study_repo):
     assert not unstaged.exists()
 
 
-def test_release_repo_commit_history(release_repo, study_repo):
-    os.chdir(release_repo.name)
-    files = config.git_files(Path(release_repo.name))
-    release.main(study_repo_url=study_repo.name, token="", files=files)
-    os.chdir(study_repo.name)
-    log = subprocess.check_output(["git", "log", "--all"], encoding="utf8")
-    assert "second commit" in log
-    assert "first commit" not in log
-
-    search = subprocess.check_output(
-        ["git", "log", "--all", "-Sunredacted"], encoding="utf8"
-    )
-    assert search == ""
-
-
 def test_noop_message(capsys, release_repo, study_repo):
     os.chdir(release_repo.name)
     files = config.git_files(Path(release_repo.name))
-    release.main(study_repo_url=study_repo.name, token="", files=files)
-    release.main(study_repo_url=study_repo.name, token="", files=files)
+    release.main(
+        study_repo_url=study_repo.name, token="", files=files, commit_msg="msg"
+    )
+    release.main(
+        study_repo_url=study_repo.name, token="", files=files, commit_msg="msg"
+    )
     captured = capsys.readouterr()
     assert captured.out.splitlines()[-1] == "Nothing to do!"
 

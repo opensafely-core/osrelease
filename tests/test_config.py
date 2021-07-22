@@ -187,6 +187,7 @@ def test_load_config_new_publish(options, tmp_path, default_config):
         "study_repo_url": "repo",
         "workspace": "workspace",
         "username": "github-user",
+        "commit_message": f"Released from {tmp_path} by github-user",
     }
 
 
@@ -209,6 +210,7 @@ def test_load_config_new_publish_dirs(options, tmp_path, default_config):
         "study_repo_url": "repo",
         "workspace": "workspace",
         "username": "github-user",
+        "commit_message": f"Released from {tmp_path} by github-user",
     }
 
 
@@ -226,6 +228,7 @@ def test_load_config_old_publish_with_files(options, tmp_path, default_config):
         "study_repo_url": "repo",
         "workspace": "workspace",
         "username": "github-user",
+        "commit_message": f"Released from {tmp_path} by github-user",
     }
 
 
@@ -247,4 +250,5 @@ def test_load_config_old_publish_with_git(
         "study_repo_url": "repo",
         "workspace": "workspace",
         "username": "github-user",
+        "commit_message": f"Released from {rpath} by github-user",
     }
