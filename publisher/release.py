@@ -83,15 +83,10 @@ def make_index(subdir):
         return None
 
 
-def main(study_repo_url, token, files):
-
-    # List all files that are committed in the latest version
-    last_commit_message = subprocess.check_output(
-        ["git", "log", "-1", "--pretty=%B"], encoding="utf8"
-    ).strip()
+def main(study_repo_url, token, files, commit_msg):
     release_branch = "release-candidates"
     release_subdir = Path("released_outputs")
-    repo_dir = Path(os.getcwd())
+    workspace_dir = Path(os.getcwd())
     released = False
     with tempfile.TemporaryDirectory() as d:
         try:
@@ -113,7 +108,7 @@ def main(study_repo_url, token, files):
             logger.debug("Copying files from current repo to the checked out one")
             for path in files:
                 dst = release_subdir / path
-                src = repo_dir / path
+                src = workspace_dir / path
                 dst.parent.mkdir(exist_ok=True, parents=True)
                 logger.debug("Copied %s", src)
                 shutil.copy(src, dst)
@@ -124,9 +119,11 @@ def main(study_repo_url, token, files):
                 with open(release_subdir / "README.md", "w") as f:
                     f.write(index_markdown)
                 run_cmd(["git", "add", "--all"])
-                trailer = f"Opensafely-released-from: {socket.getfqdn()}:{repo_dir} "
+                trailer = (
+                    f"Opensafely-released-from: {socket.getfqdn()}:{workspace_dir} "
+                )
                 commit_returncode = run_cmd(
-                    ["git", "commit", "-m", f"{last_commit_message}\n\n{trailer}"],
+                    ["git", "commit", "-m", f"{commit_msg}\n\n{trailer}"],
                     raise_exc=False,
                 )
 
@@ -153,7 +150,7 @@ def main(study_repo_url, token, files):
         finally:
             # ensure we do not maintain an open handle on the temp dir, or else
             # the clean up fails
-            os.chdir(repo_dir)
+            os.chdir(workspace_dir)
 
         return released
 
@@ -180,7 +177,12 @@ def release(options, release_dir):
                 cfg["username"],
             )
         else:
-            released = main(cfg["study_repo_url"], cfg["private_token"], files)
+            released = main(
+                cfg["study_repo_url"],
+                cfg["private_token"],
+                files,
+                cfg["commit_message"],
+            )
 
         if released:
 

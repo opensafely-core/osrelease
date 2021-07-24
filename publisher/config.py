@@ -132,13 +132,15 @@ def load_config(options, release_dir, env=os.environ):
             "Only members of the core OpenSAFELY team can publish outputs. "
             "Please email disclosurecontrol@opensafely.org to request a release.\n"
         )
+    username = allowed_usernames[local_username]
 
     config = {
         "backend_token": cfg.get("BACKEND_TOKEN"),
         "private_token": cfg.get("PRIVATE_REPO_ACCESS_TOKEN"),
         "study_repo_url": manifest["repo"],
         "workspace": manifest["workspace"],
-        "username": allowed_usernames[local_username],
+        "username": username,
+        "commit_message": f"Released from {release_dir} by {username}",
     }
 
     if not config["backend_token"]:
