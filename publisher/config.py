@@ -113,7 +113,7 @@ def load_config(options, release_dir, env=os.environ):
     for f in options.files:
         path = Path(f)
         if path.is_dir():
-            files.extend(path.glob("**/*"))
+            files.extend(f for f in path.glob("**/*") if f.is_file())
         else:
             files.append(path)
 

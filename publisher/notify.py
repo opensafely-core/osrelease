@@ -11,7 +11,7 @@ def main(token, username, path, files):
         {
             "created_by": username,
             "path": path,
-            "files": files,
+            "files": [str(f) for f in files],
         }
     ).encode("utf-8")
 
