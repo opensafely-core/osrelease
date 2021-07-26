@@ -190,7 +190,7 @@ def release(options, release_dir):
                 cfg["backend_token"],
                 cfg["username"],
                 str(release_dir),
-                [f.relative_to(release_dir) for f in files],
+                files,
             )
 
     except Exception as exc:
