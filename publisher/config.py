@@ -127,20 +127,26 @@ def load_config(options, release_dir, env=os.environ):
         allowed_usernames = {u: u for u in allowed_usernames}
 
     local_username = getpass.getuser()
-    if local_username not in allowed_usernames:
-        sys.exit(
-            "Only members of the core OpenSAFELY team can publish outputs. "
-            "Please email disclosurecontrol@opensafely.org to request a release.\n"
-        )
-    username = allowed_usernames[local_username]
+    github_username = allowed_usernames.get(local_username, None)
+
+    if github_username is None:
+        # we do not know who they are
+        if options.new_publish:
+            sys.exit("You are not in the configured list of users to use osrelease.")
+        else:
+            sys.exit(
+                "Only members of the core OpenSAFELY team can publish outputs. "
+                "Please email disclosurecontrol@opensafely.org to request a release.\n"
+            )
 
     config = {
         "backend_token": cfg.get("BACKEND_TOKEN"),
         "private_token": cfg.get("PRIVATE_REPO_ACCESS_TOKEN"),
+        "api_server": cfg.get("API_SERVER", "http://127.0.0.1:8001"),
         "study_repo_url": manifest["repo"],
         "workspace": manifest["workspace"],
-        "username": username,
-        "commit_message": f"Released from {release_dir} by {username}",
+        "username": github_username,
+        "commit_message": f"Released from {release_dir} by {github_username}",
     }
 
     if not config["backend_token"]:

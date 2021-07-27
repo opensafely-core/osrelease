@@ -1,4 +1,5 @@
 import io
+from collections import deque
 from datetime import datetime
 from http.client import HTTPResponse
 
@@ -6,8 +7,9 @@ from http.client import HTTPResponse
 class UrlopenFixture:
     """Fixture for mocking urlopen."""
 
-    request = None
-    response = None
+    def __init__(self):
+        self.requests = []
+        self.responses = deque()
 
     class socket:
         """Minimal socket api as used by HTTPResponse"""
@@ -18,7 +20,7 @@ class UrlopenFixture:
         def makefile(self, mode):
             return self.stream
 
-    def set_response(self, status, headers={}, body=None):
+    def add_response(self, status, headers={}, body=None):
         """Create a HTTP response byte-stream to be parsed by HTTPResponse."""
         lines = [f"HTTP/1.1 {status.value} {status.phrase}"]
         lines.append(f"Date: {datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S')}")
@@ -35,11 +37,12 @@ class UrlopenFixture:
         if body:
             data += body.encode("utf8")
 
-        self.sock = self.socket(data)
+        self.responses.append(self.socket(data))
 
     def urlopen(self, request):
         """Replacement urlopen function."""
-        self.request = request
-        self.response = HTTPResponse(self.sock, method=request.method)
-        self.response.begin()
-        return self.response
+        self.requests.append(request)
+        socket = self.responses.popleft()
+        response = HTTPResponse(socket, method=request.method)
+        response.begin()
+        return response

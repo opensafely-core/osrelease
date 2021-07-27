@@ -1,4 +1,5 @@
 import getpass
+import json
 import os
 import sys
 from pathlib import Path
@@ -6,7 +7,6 @@ from pathlib import Path
 import pytest
 
 from publisher import config
-from tests.test_upload import write_manifest
 
 
 def write_config(tmp_path, **kwargs):
@@ -17,6 +17,16 @@ def write_config(tmp_path, **kwargs):
     cfg.write_text("\n".join(lines))
     print("\n".join(lines))
     return {"OSRELEASE_CONFIG": str(cfg)}
+
+
+def write_manifest(release_dir, workspace="workspace", repo="repo", **kwargs):
+    manifest = {"workspace": workspace, "repo": repo}
+    manifest.update(kwargs)
+    manifest_path = Path("metadata") / "manifest.json"
+    actual_path = release_dir / manifest_path
+    actual_path.parent.mkdir()
+    actual_path.write_text(json.dumps(manifest))
+    return manifest
 
 
 @pytest.fixture
@@ -182,6 +192,7 @@ def test_load_config_new_publish(options, tmp_path, default_config):
     files, cfg = config.load_config(options, tmp_path)
     assert files == [f]
     assert cfg == {
+        "api_server": "http://127.0.0.1:8001",
         "backend_token": "token",
         "private_token": "private",
         "study_repo_url": "repo",
@@ -205,6 +216,7 @@ def test_load_config_new_publish_dirs(options, tmp_path, default_config):
     files, cfg = config.load_config(options, tmp_path)
     assert list(sorted(files)) == [f1, f2]
     assert cfg == {
+        "api_server": "http://127.0.0.1:8001",
         "backend_token": "token",
         "private_token": "private",
         "study_repo_url": "repo",
@@ -223,6 +235,7 @@ def test_load_config_old_publish_with_files(options, tmp_path, default_config):
     files, cfg = config.load_config(options, tmp_path)
     assert files == [f]
     assert cfg == {
+        "api_server": "http://127.0.0.1:8001",
         "backend_token": "token",
         "private_token": "private",
         "study_repo_url": "repo",
@@ -245,6 +258,7 @@ def test_load_config_old_publish_with_git(
     files, cfg = config.load_config(options, rpath)
     assert files == [Path("a/b/committed.txt")]
     assert cfg == {
+        "api_server": "http://127.0.0.1:8001",
         "backend_token": "token",
         "private_token": "private",
         "study_repo_url": "repo",

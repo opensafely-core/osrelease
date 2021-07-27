@@ -10,7 +10,7 @@ import tempfile
 import urllib.parse
 from pathlib import Path
 
-from . import config, notify, upload
+from . import config, notify
 
 GITHUB_PROXY_DOMAIN = "github-proxy.opensafely.org"
 
@@ -169,12 +169,16 @@ def release(options, release_dir):
                 sys.exit()
 
         if options.new_publish:
-            released = upload.release(
-                release_dir,
+            # defer loading temporarily as it has dependencies that are not in
+            # place in prod
+            from publisher import upload
+
+            released = upload.main(
                 files,
                 cfg["workspace"],
                 cfg["backend_token"],
                 cfg["username"],
+                cfg["api_server"],
             )
         else:
             released = main(
@@ -184,14 +188,13 @@ def release(options, release_dir):
                 cfg["commit_message"],
             )
 
-        if released:
-
-            notify.main(
-                cfg["backend_token"],
-                cfg["username"],
-                str(release_dir),
-                files,
-            )
+            if released:
+                notify.main(
+                    cfg["backend_token"],
+                    cfg["username"],
+                    str(release_dir),
+                    [f.relative_to(release_dir) for f in files],
+                )
 
     except Exception as exc:
         if options.verbose > 0:

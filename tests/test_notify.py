@@ -18,7 +18,7 @@ def urlopen(monkeypatch):
 
 
 def test_main_success(urlopen):
-    urlopen.set_response(
+    urlopen.add_response(
         HTTPStatus.CREATED,
         headers={
             "Location": "/location",
@@ -28,9 +28,9 @@ def test_main_success(urlopen):
     main("token", "testuser", "/path/to/outputs", ["output/file.txt"])
 
     JOB_SERVER = os.environ.get("JOB_SERVER", "https://jobs.opensafely.org")
-    assert urlopen.request.full_url == (f"{JOB_SERVER}/api/v2/release-notifications/")
-    assert urlopen.request.headers["Authorization"] == "token"
-    assert json.loads(urlopen.request.data.decode("utf8")) == {
+    assert urlopen.requests[0].full_url == (f"{JOB_SERVER}/api/v2/release-notifications/")
+    assert urlopen.requests[0].headers["Authorization"] == "token"
+    assert json.loads(urlopen.requests[0].data.decode("utf8")) == {
         "created_by": "testuser",
         "path": "/path/to/outputs",
         "files": ["output/file.txt"],
@@ -38,7 +38,7 @@ def test_main_success(urlopen):
 
 
 def test_main_error_response(urlopen):
-    urlopen.set_response(
+    urlopen.add_response(
         HTTPStatus.BAD_REQUEST,
         headers={"Content-Type": "application/json"},
         body=json.dumps({"detail": "ERROR MSG"}),
