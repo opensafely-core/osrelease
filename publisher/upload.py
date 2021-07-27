@@ -1,51 +1,78 @@
-import getpass
 import hashlib
 import io
 import json
 import os
 import urllib.error
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.request import Request, urlopen
-from zipfile import ZipFile
+
+from publisher.signing import AuthToken
+from publisher.schema import Release, ReleaseFile
 
 
-# this hashing method should be kept consistent with job-server
-def hash_files(release_dir, files):
-    # use md5 because its fast, and we only care about uniqueness, not security
-    hash = hashlib.md5()
-    # sort for consistency
-    for filename in sorted(files):
-        path = release_dir / filename
-        hash.update(path.read_bytes())
-    return hash.hexdigest()
+class UploadException(Exception):
+    pass
 
 
-# for testing
-JOB_SERVER = os.environ.get("JOB_SERVER", "https://jobs.opensafely.org")
+class Forbidden(Exception):
+    pass
 
 
-def main(release_dir, files, workspace, token, user):
-    # include the manifest in the release
-    files.append(Path("metadata/manifest.json"))
-    release_hash = hash_files(release_dir, files)
+def main(files, workspace, backend_token, user, api_server):
+    workspace_url = f"{api_server}/workspace/{workspace}"
+    auth_token = get_token(workspace_url, user, backend_token)
 
-    zip_buffer = io.BytesIO()
-    with ZipFile(zip_buffer, "w") as zip_file:
-        for path in files:
-            zip_file.write(release_dir / path, arcname=str(path))
+    release_create_url = workspace_url + "/release"
 
-    data = zip_buffer.getvalue()
+    release = Release(
+        files={str(f): hashlib.sha256(f.read_bytes()).hexdigest() for f in files}
+    )
+
+    try:
+        response = do_post(release_create_url, release.json(), auth_token)
+    except Forbidden:
+        raise UploadException(
+            f"User {user} does not have permission to create a release"
+        )
+
+    release_id = response.headers["Release-Id"]
+    release_url = response.headers["Location"]
+
+    try:
+        for f in files:
+            release_file = ReleaseFile(name=str(f))
+            do_post(release_url, release_file.json(), auth_token)
+    except Forbidden:
+        # they can create releases, but not uploaded them
+        print(
+            f"Release {release_id} with {len(files)} files has been requested and will be reviewed by the disclosure team."
+        )
+    else:
+        print(f"Release {release_id} with {len(files)} files has been uploaded.")
+
+
+def get_token(url, user, backend_token):
+    token = AuthToken(
+        url=url,
+        user=user,
+        expiry=datetime.now(timezone.utc) + timedelta(minutes=5),
+    )
+    return token.sign(backend_token, salt="hatch")
+
+
+def do_post(url, data, auth_token):
+
+    data = data.encode('utf8')
     request = Request(
-        url=f"{JOB_SERVER}/api/v2/workspaces/{workspace}/releases/{release_hash}",
-        method="PUT",
+        url=url,
         data=data,
+        method="POST",
         headers={
-            "Accept": "application/json",  # only for errors format
+            "Accept": "application/json",
             "Content-Length": len(data),
-            "Content-Type": "application/zip",
-            "Content-Disposition": "attachment; filename=release.zip",
-            "Authorization": token,
-            "Backend-User": user,
+            "Content-Type": "application/json",
+            "Authorization": auth_token,
         },
     )
 
@@ -55,11 +82,11 @@ def main(release_dir, files, workspace, token, user):
         # HTTPErrors can be treated as HTTPResponse
         response = exc
 
-    if response.status in (201, 303):
-        location = response.headers["Location"]
-        verb = "created" if response.status == 201 else "already uploaded"
-        print(f"Release {verb} at {location}")
-        return response.status == 201
+    if response.status == 201:
+        return response
+
+    if response.status == 403:
+        raise Forbidden()
 
     error_msg = response.read().decode("utf8")
 
@@ -70,4 +97,6 @@ def main(release_dir, files, workspace, token, user):
         except Exception:
             pass
 
-    raise Exception(f"Error: {response.status} response from the server: {error_msg}")
+    raise UploadException(
+        f"Error: {response.status} response from the server: {error_msg}"
+    )
