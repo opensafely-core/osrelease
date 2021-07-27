@@ -1,3 +1,10 @@
+# This file is currently maintained in the release-hatch project, until we can
+# extract it into it's own library.
+#
+# https://github.com/opensafely-core/release-hatch
+#
+# Until then, do not make local changes, rather copy the latest version of this
+# file into your project.
 from datetime import datetime
 from typing import Dict, List
 

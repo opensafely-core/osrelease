@@ -44,7 +44,7 @@ def main(files, workspace, backend_token, user, api_server):
             release_file = ReleaseFile(name=str(f))
             do_post(release_url, release_file.json(), auth_token)
     except Forbidden:
-        # they can create releases, but not uploaded them
+        # they can create releases, but not upload them
         print(
             f"Release {release_id} with {len(files)} files has been requested and will be reviewed by the disclosure team."
         )
