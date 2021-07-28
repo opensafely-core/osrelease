@@ -104,7 +104,7 @@ def get_github_username(cfg):
     if isinstance(allowed_usernames, list):
         allowed_usernames = {u: u for u in allowed_usernames}
 
-    local_username = getpass.getuser()
+    local_username = get_current_user()
     return allowed_usernames.get(local_username, None)
 
 
