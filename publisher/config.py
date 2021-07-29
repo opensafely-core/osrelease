@@ -99,17 +99,21 @@ def ensure_git_config():
         )
 
 
-def load_config(options, release_dir, env=os.environ):
-    ensure_git_config()
+def get_github_username(cfg):
+    allowed_usernames = cfg.get("ALLOWED_USERS", {})
+    if isinstance(allowed_usernames, list):
+        allowed_usernames = {u: u for u in allowed_usernames}
 
-    cfg = get_config(env=env)
-    manifest = find_manifest(release_dir)
+    local_username = get_current_user()
+    return allowed_usernames.get(local_username, None)
+
+
+def get_osrelease_files(options, manifest):
+    files = []
     if manifest is None:
         sys.exit(
             "Could not find metadata/manifest.json - are you in a workspace directory?"
         )
-
-    files = []
     for f in options.files:
         path = Path(f)
         if path.is_dir():
@@ -121,14 +125,13 @@ def load_config(options, release_dir, env=os.environ):
     if not_exist:
         filelist = ", ".join(str(s) for s in not_exist)
         sys.exit(f"Files do not exist: {filelist}")
+    return files
 
-    allowed_usernames = cfg.get("ALLOWED_USERS", {})
-    if isinstance(allowed_usernames, list):
-        allowed_usernames = {u: u for u in allowed_usernames}
 
-    local_username = getpass.getuser()
-    github_username = allowed_usernames.get(local_username, None)
-
+def load_osrelease_config(options, release_dir, cfg):
+    manifest = find_manifest(release_dir)
+    files = get_osrelease_files(options, manifest)
+    github_username = get_github_username(cfg)
     if github_username is None:
         # we do not know who they are
         if options.new_publish:
@@ -138,7 +141,6 @@ def load_config(options, release_dir, env=os.environ):
                 "Only members of the core OpenSAFELY team can publish outputs. "
                 "Please email disclosurecontrol@opensafely.org to request a release.\n"
             )
-
     config = {
         "backend_token": cfg.get("BACKEND_TOKEN"),
         "private_token": cfg.get("PRIVATE_REPO_ACCESS_TOKEN"),
@@ -158,7 +160,6 @@ def load_config(options, release_dir, env=os.environ):
             sys.exit("No files provided to release")
     else:
         # deprecated github publishing
-        config["study_repo_url"] = manifest["repo"]
         if not config["private_token"]:
             sys.exit("Could not load PRIVATE_REPO_ACCESS_TOKEN token from config file")
 
@@ -168,5 +169,33 @@ def load_config(options, release_dir, env=os.environ):
                 files = git_files(release_dir)
             else:
                 sys.exit("No files provided to release")
+    return files, config
+
+
+def load_jobrunner_stats_config(cfg):
+    github_username = get_github_username(cfg)
+    if github_username is None:
+        # we do not know who they are
+        sys.exit(
+            "Only members of the core OpenSAFELY team can publish jobrunner stats."
+        )
+    config = {
+        "private_token": cfg.get("PRIVATE_REPO_ACCESS_TOKEN"),
+        "username": github_username,
+    }
+    if not config["private_token"]:
+        sys.exit("Could not load PRIVATE_REPO_ACCESS_TOKEN token from config file")
+    return config
+
+
+def load_config(options, release_dir, env=os.environ, entrypoint="osrelease"):
+    ensure_git_config()
+
+    cfg = get_config(env=env)
+    if entrypoint == "osrelease":
+        files, config = load_osrelease_config(options, release_dir, cfg)
+    else:
+        files = None
+        config = load_jobrunner_stats_config(cfg)
 
     return files, config
