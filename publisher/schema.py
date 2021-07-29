@@ -11,11 +11,24 @@ from typing import Dict, List
 from pydantic import BaseModel
 
 
+class UrlFileName(str):
+    """str file name that normalises path separators."""
+
+    @classmethod
+    def __get_validators__(cls):
+        """Tell pydantic how to validate me."""
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, value):
+        return str(value).replace("\\", "/")
+
+
 class FileSchema(BaseModel):
     """Metadata for a workspace file."""
 
-    name: str
-    url: str
+    name: UrlFileName
+    url: UrlFileName
     size: int
     sha256: str
     user: str = None
@@ -37,7 +50,7 @@ class Release(BaseModel):
     Files is a dict with {name: sha256} mapping.
     """
 
-    files: Dict[str, str]
+    files: Dict[UrlFileName, str]
 
 
 class ReleaseFile(BaseModel):

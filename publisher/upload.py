@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 
 from publisher.signing import AuthToken
-from publisher.schema import Release, ReleaseFile
+from publisher.schema import Release, ReleaseFile, UrlFileName
 
 
 class UploadException(Exception):
@@ -26,7 +26,7 @@ def main(files, workspace, backend_token, user, api_server):
     release_create_url = workspace_url + "/release"
 
     release = Release(
-        files={str(f): hashlib.sha256(f.read_bytes()).hexdigest() for f in files}
+        files={UrlFileName(f): hashlib.sha256(f.read_bytes()).hexdigest() for f in files}
     )
 
     try:
@@ -36,20 +36,26 @@ def main(files, workspace, backend_token, user, api_server):
             f"User {user} does not have permission to create a release"
         )
 
+
     release_id = response.headers["Release-Id"]
     release_url = response.headers["Location"]
+    print(f"Release {release_id} created with {len(files)} files.")
 
     try:
         for f in files:
             release_file = ReleaseFile(name=str(f))
+            print(" - uploading {f}... ", end="")
             do_post(release_url, release_file.json(), auth_token)
+            print("done")
     except Forbidden:
         # they can create releases, but not upload them
+        print("permission denied")
         print(
-            f"Release {release_id} with {len(files)} files has been requested and will be reviewed by the disclosure team."
+            f"You do not have permission to upload the requested files for Release {release_id}.\n"
+            f"The OpenSAFELY review team will review your requested Release."
         )
     else:
-        print(f"Release {release_id} with {len(files)} files has been uploaded.")
+        print(f"Uploaded {len(files)} files for Release {release_id}")
 
 
 def get_token(url, user, backend_token):
