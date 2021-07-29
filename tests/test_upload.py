@@ -30,7 +30,8 @@ def workspace_files(tmp_path):
     cwd = os.getcwd()
     os.chdir(tmp_path)
 
-    yield [Path(f) for f in files]
+    # get the os files so that we tests proper windows paths
+    yield [p.relative_to(tmp_path) for p in tmp_path.glob("**/*") if p.is_file()]
 
     os.chdir(cwd)
 
@@ -61,6 +62,8 @@ def test_main_success_no_upload_permission(workspace_files, urlopen):
 
     request1 = urlopen.requests[0]
     assert request1.full_url == "http://hatch/workspace/workspace/release"
+    files = json.loads(request1.data)["files"]
+    assert list(files.keys()) == ["foo.txt", "dir/bar.txt", "outputs/data.csv"]
 
     request2 = urlopen.requests[1]
     assert request2.full_url == "http://hatch/release/id"

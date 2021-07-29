@@ -4,17 +4,21 @@ on: [push]
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
-  test_job:
-    runs-on: ubuntu-latest
+  tests:
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, windows-2019]
+    runs-on: ${{ matrix.os }}
     name: Run test suite
     steps:
     - name: Checkout
       uses: actions/checkout@v1
-    - name: Set up Python 3.7
+    - name: Set up Python 3.9
       uses: actions/setup-python@v1
       with:
-        python-version: 3.7
+        python-version: 3.9
     - name: install deps
+      if: matrix.os == 'ubuntu-20.04'
       run: sudo apt-get install coreutils # for logname
     - name: Install dependencies
       run: |

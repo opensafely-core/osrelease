@@ -25,7 +25,7 @@ def setup_env(monkeypatch):
     )
     subprocess.check_call(["git", "config", "--global", "user.name", "test"])
     yield
-    shutil.rmtree(d)
+    shutil.rmtree(d, ignore_errors=True)
 
 
 @pytest.fixture
