@@ -68,6 +68,7 @@ def main(current_dir, job_runner_dir, days_to_extract, repo_url, branch, token):
                 )
                 os.chdir(f"{d}/repo")
             except subprocess.CalledProcessError:
+                os.chdir(current_dir)
                 raise RuntimeError("Unable to run extraction")
 
             run_cmd(["git", "add", "--all"])
