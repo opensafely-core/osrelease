@@ -126,7 +126,7 @@ def load_config(options, release_dir, env=os.environ):
     if isinstance(allowed_usernames, list):
         allowed_usernames = {u: u for u in allowed_usernames}
 
-    local_username = getpass.getuser()
+    local_username = get_current_user()
     github_username = allowed_usernames.get(local_username, None)
 
     if github_username is None:

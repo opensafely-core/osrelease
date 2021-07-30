@@ -63,7 +63,7 @@ def test_main_success_no_upload_permission(workspace_files, urlopen):
     request1 = urlopen.requests[0]
     assert request1.full_url == "http://hatch/workspace/workspace/release"
     files = json.loads(request1.data)["files"]
-    assert list(files.keys()) == ["foo.txt", "dir/bar.txt", "outputs/data.csv"]
+    assert list(sorted(files.keys())) == list(sorted(["foo.txt", "dir/bar.txt", "outputs/data.csv"]))
 
     request2 = urlopen.requests[1]
     assert request2.full_url == "http://hatch/release/id"
