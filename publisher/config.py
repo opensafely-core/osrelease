@@ -158,7 +158,6 @@ def load_config(options, release_dir, env=os.environ):
             sys.exit("No files provided to release")
     else:
         # deprecated github publishing
-        config["study_repo_url"] = manifest["repo"]
         if not config["private_token"]:
             sys.exit("Could not load PRIVATE_REPO_ACCESS_TOKEN token from config file")
 
