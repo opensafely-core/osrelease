@@ -63,19 +63,5 @@ def study_repo():
 
 
 @pytest.fixture
-def temp_jobrunner():
-    """Create a working folder which mimics the job-runner files that jobrunner_stats expects"""
-    d = tempfile.TemporaryDirectory()
-    os.chdir(d.name)
-    run_script = pathlib.Path("scripts/run.sh")
-    extract_script = pathlib.Path("jobrunner/extract_stats.py")
-    for f in [run_script, extract_script]:
-        f.parent.mkdir(parents=True, exist_ok=True)
-        f.touch()
-    run_script.write_text('#!/bin/bash\ntouch "${@: -1}"')
-    return d
-
-
-@pytest.fixture
 def options():
     return release.parser.parse_args([])

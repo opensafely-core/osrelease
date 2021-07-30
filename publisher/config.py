@@ -99,29 +99,28 @@ def ensure_git_config():
         )
 
 
-def load_config(options, release_dir, env=os.environ, entrypoint="osrelease"):
-    # ensure_git_config()
+def load_config(options, release_dir, env=os.environ):
+    ensure_git_config()
 
     cfg = get_config(env=env)
     manifest = find_manifest(release_dir)
+    if manifest is None:
+        sys.exit(
+            "Could not find metadata/manifest.json - are you in a workspace directory?"
+        )
+
     files = []
+    for f in options.files:
+        path = Path(f)
+        if path.is_dir():
+            files.extend(f for f in path.glob("**/*") if f.is_file())
+        else:
+            files.append(path)
 
-    if entrypoint == "osrelease":
-        if manifest is None:
-            sys.exit(
-                "Could not find metadata/manifest.json - are you in a workspace directory?"
-            )
-        for f in options.files:
-            path = Path(f)
-            if path.is_dir():
-                files.extend(f for f in path.glob("**/*") if f.is_file())
-            else:
-                files.append(path)
-
-        not_exist = [p for p in files if not p.exists()]
-        if not_exist:
-            filelist = ", ".join(str(s) for s in not_exist)
-            sys.exit(f"Files do not exist: {filelist}")
+    not_exist = [p for p in files if not p.exists()]
+    if not_exist:
+        filelist = ", ".join(str(s) for s in not_exist)
+        sys.exit(f"Files do not exist: {filelist}")
 
     allowed_usernames = cfg.get("ALLOWED_USERS", {})
     if isinstance(allowed_usernames, list):
@@ -143,27 +142,21 @@ def load_config(options, release_dir, env=os.environ, entrypoint="osrelease"):
     config = {
         "backend_token": cfg.get("BACKEND_TOKEN"),
         "private_token": cfg.get("PRIVATE_REPO_ACCESS_TOKEN"),
-        "username": username,
+        "api_server": cfg.get("API_SERVER", "http://127.0.0.1:8001"),
+        "study_repo_url": manifest["repo"],
+        "workspace": manifest["workspace"],
+        "username": github_username,
+        "commit_message": f"Released from {release_dir} by {github_username}",
     }
-    if manifest is not None:
-        config.update(
-            {
-            "api_server": cfg.get("API_SERVER", "http://127.0.0.1:8001"),
-            "study_repo_url": manifest["repo"],
-            "workspace": manifest["workspace"],
-            "username": github_username,
-            "commit_message": f"Released from {release_dir} by {github_username}",
-            }
-        )
 
     if not config["backend_token"]:
         sys.exit("Could not load BACKEND_TOKEN from config")
 
-    if getattr(options, "new_publish", False):
+    if options.new_publish:
         # must provide files in new publish
         if not files:
             sys.exit("No files provided to release")
-    elif entrypoint == "osrelease":
+    else:
         # deprecated github publishing
         config["study_repo_url"] = manifest["repo"]
         if not config["private_token"]:
@@ -175,7 +168,5 @@ def load_config(options, release_dir, env=os.environ, entrypoint="osrelease"):
                 files = git_files(release_dir)
             else:
                 sys.exit("No files provided to release")
-    else:
-        files = None
 
     return files, config
