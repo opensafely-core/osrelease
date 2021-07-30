@@ -55,9 +55,17 @@ should be applied.
 
     `git clone https://github.com/opensafely/output-publisher /d/output-publisher`
 
+* Create or update dependencies
+
+    `git clone https://github.com/opensafely/windows-wheels /d/wheels`
+
 * Create venv at `/d/osrelease`
 
     `/c/Program\ Files\Python39.exe -m pyenv /d/osrelease`
+
+* Install dependencies
+
+    `/d/osrelease/Scripts/pip install /d/wheels/*.whl`
 
 * Install into venv
  
@@ -66,8 +74,6 @@ should be applied.
 * Configure
   
     Add the GitHub private repo token to `/d/osrelease/osrelease_config.py`: `PRIVATE_REPO_ACCESS_TOKEN="<token>"`
-
-* Work with TPP to ensure `/d/osrelease/Scripts` on system PATH
 
 
 ## Updating
