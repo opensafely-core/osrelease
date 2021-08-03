@@ -26,7 +26,9 @@ def main(files, workspace, backend_token, user, api_server):
     release_create_url = workspace_url + "/release/"
 
     release = Release(
-        files={UrlFileName(f): hashlib.sha256(f.read_bytes()).hexdigest() for f in files}
+        files={
+            UrlFileName(f): hashlib.sha256(f.read_bytes()).hexdigest() for f in files
+        }
     )
 
     try:
@@ -36,7 +38,6 @@ def main(files, workspace, backend_token, user, api_server):
             f"User {user} does not have permission to create a release"
         )
 
-
     release_id = response.headers["Release-Id"]
     release_url = response.headers["Location"]
     print(f"Release {release_id} created with {len(files)} files.")
@@ -44,7 +45,7 @@ def main(files, workspace, backend_token, user, api_server):
     try:
         for f in files:
             release_file = ReleaseFile(name=str(f))
-            print(" - uploading {f}... ", end="")
+            print(f" - uploading {f}... ", end="")
             do_post(release_url, release_file.json(), auth_token)
             print("done")
     except Forbidden:
@@ -69,7 +70,7 @@ def get_token(url, user, backend_token):
 
 def do_post(url, data, auth_token):
 
-    data = data.encode('utf8')
+    data = data.encode("utf8")
     request = Request(
         url=url,
         data=data,

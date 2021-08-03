@@ -4,6 +4,41 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+import urllib.error
+from urllib.request import Request, urlopen
+
+
+def workspace_status(workspace, backend_token):
+
+    url = f"https://jobs.opensafely.org/api/v2/workspace/{workspace}/status"
+    request = Request(
+        url=url,
+        method="GET",
+        headers={
+            "Accept": "application/json",
+            "Authorization": backend_token,
+        },
+    )
+
+    try:
+        response = urlopen(request)
+    except urllib.error.HTTPError as exc:
+        # HTTPErrors can be treated as HTTPResponse
+        response = exc
+
+    if response.status == 200:
+        return json.loads(response.read().decode("utf8"))
+
+    error_msg = response.read().decode("utf8")
+
+    # try get more helpful error message
+    if response.headers["Content-Type"] == "application/json":
+        try:
+            error_msg = json.loads(error_msg)["detail"]
+        except Exception:
+            pass
+
+    raise Exception(f"Error: {response.status} response from {url}: {error_msg}")
 
 
 def get_config_file(env, filename="osrelease_config.py"):
@@ -108,6 +143,9 @@ def load_config(options, release_dir, env=os.environ):
             "Could not find metadata/manifest.json - are you in a workspace directory?"
         )
 
+    workspace = manifest["workspace"]
+    backend_token = cfg.get("BACKEND_TOKEN")
+
     files = []
     for f in options.files:
         path = Path(f)
@@ -128,6 +166,10 @@ def load_config(options, release_dir, env=os.environ):
     local_username = get_current_user()
     github_username = allowed_usernames.get(local_username, None)
 
+    # we can force new_publish, or else we query job-server to find out which to use
+    if not options.new_publish:
+        options.new_publish = workspace_status(workspace, backend_token)
+
     if github_username is None:
         # we do not know who they are
         if options.new_publish:
@@ -139,11 +181,11 @@ def load_config(options, release_dir, env=os.environ):
             )
 
     config = {
-        "backend_token": cfg.get("BACKEND_TOKEN"),
+        "backend_token": backend_token,
         "private_token": cfg.get("PRIVATE_REPO_ACCESS_TOKEN"),
         "api_server": cfg.get("API_SERVER", "http://127.0.0.1:8001"),
         "study_repo_url": manifest["repo"],
-        "workspace": manifest["workspace"],
+        "workspace": workspace,
         "username": github_username,
         "commit_message": f"Released from {release_dir} by {github_username}",
     }
