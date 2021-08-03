@@ -100,7 +100,6 @@ def ensure_git_config():
 
 
 def load_config(options, release_dir, env=os.environ):
-    ensure_git_config()
 
     cfg = get_config(env=env)
     manifest = find_manifest(release_dir)
@@ -157,6 +156,7 @@ def load_config(options, release_dir, env=os.environ):
         if not files:
             sys.exit("No files provided to release")
     else:
+        ensure_git_config()
         # deprecated github publishing
         if not config["private_token"]:
             sys.exit("Could not load PRIVATE_REPO_ACCESS_TOKEN token from config file")
