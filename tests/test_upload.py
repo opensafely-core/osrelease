@@ -63,7 +63,9 @@ def test_main_success_no_upload_permission(workspace_files, urlopen):
     request1 = urlopen.requests[0]
     assert request1.full_url == "http://hatch/workspace/workspace/release/"
     files = json.loads(request1.data)["files"]
-    assert list(sorted(files.keys())) == list(sorted(["foo.txt", "dir/bar.txt", "outputs/data.csv"]))
+    assert list(sorted(files.keys())) == list(
+        sorted(["foo.txt", "dir/bar.txt", "outputs/data.csv"])
+    )
 
     request2 = urlopen.requests[1]
     assert request2.full_url == "http://hatch/release/id"
@@ -82,7 +84,9 @@ def test_main_success(workspace_files, urlopen):
 
     request = urlopen.requests[0]
     assert request.full_url == "http://hatch/workspace/workspace/release/"
-    token = signing.AuthToken.verify(request.headers["Authorization"], backend_token, salt="hatch")
+    token = signing.AuthToken.verify(
+        request.headers["Authorization"], backend_token, salt="hatch"
+    )
 
     for f, r in zip(workspace_files, urlopen.requests[1:]):
         assert json.loads(r.data) == {"name": str(f)}

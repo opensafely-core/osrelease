@@ -1,5 +1,6 @@
 import getpass
 import json
+from http import HTTPStatus
 import os
 import sys
 from pathlib import Path
@@ -7,6 +8,24 @@ from pathlib import Path
 import pytest
 
 from publisher import config
+from tests.utils import UrlopenFixture
+
+
+@pytest.fixture
+def urlopen(monkeypatch):
+    data = UrlopenFixture()
+    monkeypatch.setattr(config, "urlopen", data.urlopen)
+    return data
+
+
+@pytest.fixture
+def workspace_status_new(urlopen):
+    urlopen.add_response(HTTPStatus.OK, body="true")
+
+
+@pytest.fixture
+def workspace_status_old(urlopen):
+    urlopen.add_response(HTTPStatus.OK, body="false")
 
 
 def write_config(tmp_path, **kwargs):
@@ -95,7 +114,7 @@ def test_load_config_files_not_exist(options, tmp_path):
     assert "Files do not exist: notexist" in str(exc_info.value)
 
 
-def test_load_config_no_backend_token(options, tmp_path):
+def test_load_config_no_backend_token(options, tmp_path, workspace_status_new):
     write_manifest(tmp_path)
     env = write_config(
         tmp_path,
@@ -122,7 +141,9 @@ def test_load_config_new_publish_no_files(options, default_config, tmp_path):
     assert "No files provided to release" in str(exc_info.value)
 
 
-def test_load_config_old_publish_no_private_token(options, tmp_path):
+def test_load_config_old_publish_no_private_token(
+    options, tmp_path, workspace_status_old
+):
     write_manifest(tmp_path)
     env = write_config(
         tmp_path,
@@ -136,7 +157,9 @@ def test_load_config_old_publish_no_private_token(options, tmp_path):
     assert "Could not load PRIVATE" in str(exc_info.value)
 
 
-def test_load_config_old_publish_no_git(options, default_config, tmp_path):
+def test_load_config_old_publish_no_git(
+    options, default_config, tmp_path, workspace_status_old
+):
     write_manifest(tmp_path)
 
     with pytest.raises(SystemExit) as exc_info:
@@ -145,7 +168,9 @@ def test_load_config_old_publish_no_git(options, default_config, tmp_path):
     assert "No files provided to release" in str(exc_info.value)
 
 
-def test_load_config_username_not_allowed(options, tmp_path, monkeypatch):
+def test_load_config_username_not_allowed(
+    options, tmp_path, monkeypatch, workspace_status_old
+):
     write_manifest(tmp_path)
     env = write_config(
         tmp_path, BACKEND_TOKEN="token", PRIVATE_REPO_ACCESS_TOKEN="private"
@@ -162,7 +187,10 @@ def test_load_config_username_not_allowed(options, tmp_path, monkeypatch):
 
 
 def test_load_config_username_allowed_users_list_still_blocks(
-    options, tmp_path, monkeypatch
+    options,
+    tmp_path,
+    monkeypatch,
+    workspace_status_old,
 ):
     write_manifest(tmp_path)
     env = write_config(
@@ -226,7 +254,9 @@ def test_load_config_new_publish_dirs(options, tmp_path, default_config):
     }
 
 
-def test_load_config_old_publish_with_files(options, tmp_path, default_config):
+def test_load_config_old_publish_with_files(
+    options, tmp_path, default_config, workspace_status_old
+):
     write_manifest(tmp_path)
     f = tmp_path / "file.txt"
     f.write_text("test")
@@ -246,7 +276,7 @@ def test_load_config_old_publish_with_files(options, tmp_path, default_config):
 
 
 def test_load_config_old_publish_with_git(
-    options, tmp_path, default_config, release_repo
+    options, tmp_path, default_config, release_repo, workspace_status_old
 ):
     os.chdir(release_repo.name)
     rpath = Path(release_repo.name)
