@@ -10,7 +10,7 @@ from urllib.request import Request, urlopen
 
 def workspace_status(workspace, backend_token):
 
-    url = f"https://jobs.opensafely.org/api/v2/workspace/{workspace}/status"
+    url = f"https://jobs.opensafely.org/api/v2/workspaces/{workspace}/status"
     request = Request(
         url=url,
         method="GET",
