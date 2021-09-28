@@ -157,6 +157,14 @@ def main(study_repo_url, token, files, commit_msg):
         return released
 
 
+def check_status(workspace_name):
+    res = requests.get(
+        f"https://jobs.opensafely.org/api/v2/workspaces/{workspace_name}/status"
+    )
+    uses_new_workflow = res.json()
+    return uses_new_workflow["uses_new_release_flow"]
+
+
 def release(options, release_dir):
     try:
         files, cfg = config.load_config(options, release_dir)
@@ -170,12 +178,9 @@ def release(options, release_dir):
             ):
                 sys.exit()
 
-        res = requests.get(
-            f"https://jobs.opensafely.org/api/v2/workspaces/{cfg['workspace']}/status"
-        )
-        uses_new_workflow = res.json()
+        use_new_workflow = check_status(cfg["workspace"])
 
-        if options.new_publish or uses_new_workflow["uses_new_release_flow"]:
+        if options.new_publish or use_new_workflow:
             # defer loading temporarily as it has dependencies that are not in
             # place in prod
             from publisher import upload
