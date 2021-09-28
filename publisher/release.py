@@ -10,6 +10,8 @@ import tempfile
 import urllib.parse
 from pathlib import Path
 
+import requests
+
 from . import config, notify
 
 GITHUB_PROXY_DOMAIN = "github-proxy.opensafely.org"
@@ -168,7 +170,12 @@ def release(options, release_dir):
             ):
                 sys.exit()
 
-        if options.new_publish:
+        res = requests.get(
+            f"https://jobs.opensafely.org/api/v2/workspaces/{cfg['workspace']}/status"
+        )
+        uses_new_workflow = res.json()
+
+        if options.new_publish or uses_new_workflow["uses_new_release_flow"]:
             # defer loading temporarily as it has dependencies that are not in
             # place in prod
             from publisher import upload
