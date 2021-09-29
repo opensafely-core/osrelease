@@ -73,10 +73,15 @@ pyyaml==5.3.1
 regex==2020.10.15
     # via black
 requests==2.26.0
-    # via -r requirements.prod.txt
+    # via
+    #   -r requirements.prod.txt
+    #   responses
+responses==0.14.0
+    # via -r requirements.dev.in
 six==1.15.0
     # via
     #   packaging
+    #   responses
     #   virtualenv
 toml==0.10.1
     # via
@@ -94,5 +99,6 @@ urllib3==1.26.7
     # via
     #   -r requirements.prod.txt
     #   requests
+    #   responses
 virtualenv==20.0.35
     # via pre-commit
