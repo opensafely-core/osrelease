@@ -162,7 +162,8 @@ def check_status(workspace_name):
         f"https://jobs.opensafely.org/api/v2/workspaces/{workspace_name}/status"
     )
     uses_new_workflow = res.json()
-    return uses_new_workflow["uses_new_release_flow"]
+    res.raise_for_status()
+    return bool(uses_new_workflow["uses_new_release_flow"])
 
 
 def release(options, release_dir):
