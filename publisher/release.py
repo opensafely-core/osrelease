@@ -204,7 +204,7 @@ def release(options, release_dir):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--verbose", "-v", action="count", default=0)
-parser.add_argument("--yes", "-t", action="store_true")
+parser.add_argument("--yes", "-y", action="store_true")
 parser.add_argument("--new-publish", "-n", action="store_true")
 parser.add_argument("files", nargs="*")
 

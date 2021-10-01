@@ -44,7 +44,7 @@ def main(files, workspace, backend_token, user, api_server):
 
     try:
         for f in files:
-            release_file = ReleaseFile(name=str(f))
+            release_file = ReleaseFile(name=UrlFileName(f))
             print(f" - uploading {f}... ", end="")
             do_post(release_url, release_file.json(), auth_token)
             print("done")
