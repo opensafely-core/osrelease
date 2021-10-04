@@ -4,41 +4,23 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-import urllib.error
-from urllib.request import Request, urlopen
+
+import requests
 
 
-def workspace_status(workspace, backend_token):
-
-    url = f"https://jobs.opensafely.org/api/v2/workspaces/{workspace}/status"
-    request = Request(
-        url=url,
-        method="GET",
-        headers={
-            "Accept": "application/json",
-            "Authorization": backend_token,
-        },
+def check_workplace_status(workspace_name):
+    res = requests.get(
+        f"https://jobs.opensafely.org/api/v2/workspaces/{workspace_name}/status"
     )
-
-    try:
-        response = urlopen(request)
-    except urllib.error.HTTPError as exc:
-        # HTTPErrors can be treated as HTTPResponse
-        response = exc
-
-    if response.status == 200:
-        return json.loads(response.read().decode("utf8"))
-
-    error_msg = response.read().decode("utf8")
-
-    # try get more helpful error message
-    if response.headers["Content-Type"] == "application/json":
-        try:
-            error_msg = json.loads(error_msg)["detail"]
-        except Exception:
-            pass
-
-    raise Exception(f"Error: {response.status} response from {url}: {error_msg}")
+    uses_new_workflow = res.json()
+    if res.status_code == 500:
+        sys.exit(f"Error: {res.status_code} response from {res.url}: Job Server down")
+    elif res.status_code != 200:
+        sys.exit(
+            f"Error: {res.status_code} response from {res.url}: {res.json()['detail']}"
+        )
+    else:
+        return uses_new_workflow["uses_new_release_flow"]
 
 
 def get_config_file(env, filename="osrelease_config.py"):
@@ -168,7 +150,7 @@ def load_config(options, release_dir, env=os.environ):
 
     # we can force new_publish, or else we query job-server to find out which to use
     if not options.new_publish:
-        options.new_publish = workspace_status(workspace, backend_token)
+        options.new_publish = check_workplace_status(workspace)
 
     if github_username is None:
         # we do not know who they are
