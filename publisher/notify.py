@@ -10,7 +10,7 @@ def main(token, username, path, files):
     data = json.dumps(
         {
             "created_by": username,
-            "path": path,
+            "path": str(path),
             "files": [str(f) for f in files],
         }
     ).encode("utf-8")
