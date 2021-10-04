@@ -43,12 +43,12 @@ def add_github_auth_to_repo(repo, token):
     return repo
 
 
-def run_cmd(cmd, raise_exc=True):
+def run_cmd(cmd, raise_exc=True, output_failure=True):
     logger.info("Running `%s`", " ".join(cmd))
     result = subprocess.run(cmd, encoding="utf8", capture_output=True)
     if raise_exc:
         result.check_returncode()
-    if result.returncode != 0:
+    if result.returncode != 0 and output_failure:
         logger.warning(
             "Error %s: %s\n%s\n-------", result.returncode, result.stdout, result.stderr
         )
@@ -102,7 +102,7 @@ def main(study_repo_url, token, files, commit_msg):
 
             logger.debug(f"Checked out {study_repo_url} to repo/")
             os.chdir("repo")
-            checked_out = run_cmd(["git", "checkout", release_branch], raise_exc=False)
+            checked_out = run_cmd(["git", "checkout", release_branch], raise_exc=False, output_failure=False) 
             if checked_out != 0:
                 run_cmd(["git", "checkout", "-b", release_branch])
             logger.debug("Copying files from current repo to the checked out one")
