@@ -3,11 +3,11 @@ import os
 import subprocess
 from pathlib import Path
 
-import responses
-
 import pytest
 
-from publisher import config, release
+
+from publisher import config, release, upload
+from .utils import UrlopenFixture
 
 # Fixtures for these tests:
 #
@@ -15,6 +15,13 @@ from publisher import config, release
 # staged file, and one unstaged file
 #
 # a `study_repo` is an empty git repo
+
+
+@pytest.fixture
+def urlopen(monkeypatch):
+    data = UrlopenFixture()
+    monkeypatch.setattr(upload, "urlopen", data.urlopen)
+    return data
 
 
 def test_successful_push_message(capsys, release_repo, study_repo):
@@ -94,30 +101,3 @@ def test_releaseno_args(tmp_path):
         release.release(options, tmp_path)
 
     assert "Could not find metadata/manifest.json" in str(ctx.value)
-
-
-@responses.activate
-def test_check_status():
-    responses.add(
-        responses.GET,
-        "https://jobs.opensafely.org/api/v2/workspaces/test_workspace/status",
-        json={"uses_new_release_flow": "True"},
-        status=200,
-    )
-
-    new_workflow = release.check_status("test_workspace")
-    assert new_workflow is True
-
-
-@responses.activate
-def test_check_status_down():
-    responses.add(
-        responses.GET,
-        "https://jobs.opensafely.org/api/v2/workspaces/test_workspace/status",
-        json={"error": "Bad Error"},
-        status=404,
-    )
-    with pytest.raises(Exception) as e:
-        release.check_status("test_workspace")
-
-    assert str(e.value).startswith("404 Client Error")
