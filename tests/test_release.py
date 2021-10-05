@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+
 from publisher import config, release
 
 # Fixtures for these tests:
