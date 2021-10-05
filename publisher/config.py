@@ -12,7 +12,6 @@ def check_workplace_status(workspace_name):
     res = requests.get(
         f"https://jobs.opensafely.org/api/v2/workspaces/{workspace_name}/status"
     )
-    uses_new_workflow = res.json()
     if res.status_code == 500:
         sys.exit(f"Error: {res.status_code} response from {res.url}: Job Server down")
     elif res.status_code != 200:
@@ -20,7 +19,7 @@ def check_workplace_status(workspace_name):
             f"Error: {res.status_code} response from {res.url}: {res.json()['detail']}"
         )
     else:
-        return uses_new_workflow["uses_new_release_flow"]
+        return res.json()["uses_new_release_flow"]
 
 
 def get_config_file(env, filename="osrelease_config.py"):
