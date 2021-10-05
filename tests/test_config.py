@@ -9,6 +9,30 @@ import pytest
 from publisher import config
 
 
+@pytest.yield_fixture
+def old_release_flow():
+    with responses.RequestsMock() as response:
+        response.add(
+            responses.GET,
+            "https://jobs.opensafely.org/api/v2/workspaces/workspace/status",
+            json={"uses_new_release_flow": False},
+            status=200,
+        )
+        yield response
+
+
+@pytest.yield_fixture
+def new_release_flow():
+    with responses.RequestsMock() as response:
+        response.add(
+            responses.GET,
+            "https://jobs.opensafely.org/api/v2/workspaces/workspace/status",
+            json={"uses_new_release_flow": True},
+            status=200,
+        )
+        yield response
+
+
 def write_config(tmp_path, **kwargs):
     lines = []
     for name, value in kwargs.items():
@@ -95,16 +119,8 @@ def test_load_config_files_not_exist(options, tmp_path):
     assert "Files do not exist: notexist" in str(exc_info.value)
 
 
-@responses.activate
-def test_check_status():
-    responses.add(
-        responses.GET,
-        "https://jobs.opensafely.org/api/v2/workspaces/test_workspace/status",
-        json={"uses_new_release_flow": True},
-        status=200,
-    )
-
-    new_workflow = config.check_workplace_status("test_workspace")
+def test_check_status(new_release_flow):
+    new_workflow = config.check_workplace_status("workspace")
     assert new_workflow is True
 
 
@@ -123,15 +139,7 @@ def test_check_status_down():
     assert "Error: 500 response" in str(exc_info.value)
 
 
-@responses.activate
-def test_load_config_no_backend_token(options, tmp_path):
-    responses.add(
-        responses.GET,
-        f"https://jobs.opensafely.org/api/v2/workspaces/workspace/status",
-        json={"uses_new_release_flow": True},
-        status=200,
-    )
-
+def test_load_config_no_backend_token(options, tmp_path, new_release_flow):
     write_manifest(tmp_path)
     env = write_config(
         tmp_path,
@@ -158,14 +166,7 @@ def test_load_config_new_publish_no_files(options, default_config, tmp_path):
     assert "No files provided to release" in str(exc_info.value)
 
 
-@responses.activate
-def test_load_config_old_publish_no_private_token(options, tmp_path):
-    responses.add(
-        responses.GET,
-        f"https://jobs.opensafely.org/api/v2/workspaces/workspace/status",
-        json={"uses_new_release_flow": False},
-        status=200,
-    )
+def test_load_config_old_publish_no_private_token(options, tmp_path, old_release_flow):
     write_manifest(tmp_path)
     env = write_config(
         tmp_path,
@@ -179,14 +180,9 @@ def test_load_config_old_publish_no_private_token(options, tmp_path):
     assert "Could not load PRIVATE" in str(exc_info.value)
 
 
-@responses.activate
-def test_load_config_old_publish_no_git(options, default_config, tmp_path):
-    responses.add(
-        responses.GET,
-        f"https://jobs.opensafely.org/api/v2/workspaces/workspace/status",
-        json={"uses_new_release_flow": False},
-        status=200,
-    )
+def test_load_config_old_publish_no_git(
+    options, default_config, tmp_path, old_release_flow
+):
     write_manifest(tmp_path)
 
     with pytest.raises(SystemExit) as exc_info:
@@ -195,14 +191,9 @@ def test_load_config_old_publish_no_git(options, default_config, tmp_path):
     assert "No files provided to release" in str(exc_info.value)
 
 
-@responses.activate
-def test_load_config_username_not_allowed(options, tmp_path, monkeypatch):
-    responses.add(
-        responses.GET,
-        f"https://jobs.opensafely.org/api/v2/workspaces/workspace/status",
-        json={"uses_new_release_flow": False},
-        status=200,
-    )
+def test_load_config_username_not_allowed(
+    options, tmp_path, monkeypatch, old_release_flow
+):
     write_manifest(tmp_path)
     env = write_config(
         tmp_path, BACKEND_TOKEN="token", PRIVATE_REPO_ACCESS_TOKEN="private"
@@ -218,18 +209,9 @@ def test_load_config_username_not_allowed(options, tmp_path, monkeypatch):
     assert "Only members of the core OpenSAFELY team" in str(exc_info.value)
 
 
-@responses.activate
 def test_load_config_username_allowed_users_list_still_blocks(
-    options,
-    tmp_path,
-    monkeypatch,
+    options, tmp_path, monkeypatch, old_release_flow
 ):
-    responses.add(
-        responses.GET,
-        f"https://jobs.opensafely.org/api/v2/workspaces/workspace/status",
-        json={"uses_new_release_flow": False},
-        status=200,
-    )
     write_manifest(tmp_path)
     env = write_config(
         tmp_path,
@@ -248,14 +230,7 @@ def test_load_config_username_allowed_users_list_still_blocks(
     assert "Only members of the core OpenSAFELY team" in str(exc_info.value)
 
 
-@responses.activate
 def test_load_config_new_publish_as_arg(options, tmp_path, default_config):
-    responses.add(
-        responses.GET,
-        f"https://jobs.opensafely.org/api/v2/workspaces/workspace/status",
-        json={"uses_new_release_flow": False},
-        status=200,
-    )
     write_manifest(tmp_path)
     f = tmp_path / "file.txt"
     f.write_text("test")
@@ -275,21 +250,16 @@ def test_load_config_new_publish_as_arg(options, tmp_path, default_config):
     }
 
 
-@responses.activate
-def test_load_config_new_publish_as_api_call(options, tmp_path, default_config):
+def test_load_config_new_publish_as_api_call(
+    options, tmp_path, default_config, new_release_flow
+):
     options.new_publish = False
-    # options.new_publish overruled by API call to job server
-    responses.add(
-        responses.GET,
-        f"https://jobs.opensafely.org/api/v2/workspaces/workspace/status",
-        json={"uses_new_release_flow": True},
-        status=200,
-    )
     write_manifest(tmp_path)
     f = tmp_path / "file.txt"
     f.write_text("test")
     options.files = [str(f)]
 
+    # options.new_publish overruled by API call to job server
     files, cfg = config.load_config(options, tmp_path)
     assert files == [f]
     assert cfg == {
@@ -372,16 +342,9 @@ def test_load_config_old_publish_with_files(options, tmp_path, default_config):
     }
 
 
-@responses.activate
 def test_load_config_old_publish_with_git(
-    options, tmp_path, default_config, release_repo
+    options, tmp_path, default_config, release_repo, old_release_flow
 ):
-    responses.add(
-        responses.GET,
-        f"https://jobs.opensafely.org/api/v2/workspaces/workspace/status",
-        json={"uses_new_release_flow": False},
-        status=200,
-    )
     os.chdir(release_repo.name)
     rpath = Path(release_repo.name)
 

@@ -6,8 +6,7 @@ from pathlib import Path
 import pytest
 
 
-from publisher import config, release, upload
-from .utils import UrlopenFixture
+from publisher import config, release
 
 # Fixtures for these tests:
 #
@@ -15,13 +14,6 @@ from .utils import UrlopenFixture
 # staged file, and one unstaged file
 #
 # a `study_repo` is an empty git repo
-
-
-@pytest.fixture
-def urlopen(monkeypatch):
-    data = UrlopenFixture()
-    monkeypatch.setattr(upload, "urlopen", data.urlopen)
-    return data
 
 
 def test_successful_push_message(capsys, release_repo, study_repo):
