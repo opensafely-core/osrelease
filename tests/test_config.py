@@ -57,6 +57,7 @@ def write_manifest(release_dir, workspace="workspace", repo="repo", **kwargs):
 def default_config(tmp_path, monkeypatch):
     env = write_config(
         tmp_path,
+        BACKEND="test",
         BACKEND_TOKEN="token",
         PRIVATE_REPO_ACCESS_TOKEN="private",
         ALLOWED_USERS={getpass.getuser(): "github-user"},
@@ -241,6 +242,7 @@ def test_load_config_new_publish_as_arg(options, tmp_path, default_config):
     assert files == [f]
     assert cfg == {
         "api_server": "http://127.0.0.1:8001",
+        "backend": "test",
         "backend_token": "token",
         "private_token": "private",
         "study_repo_url": "repo",
@@ -264,6 +266,7 @@ def test_load_config_new_publish_as_api_call(
     assert files == [f]
     assert cfg == {
         "api_server": "http://127.0.0.1:8001",
+        "backend": "test",
         "backend_token": "token",
         "private_token": "private",
         "study_repo_url": "repo",
@@ -307,6 +310,7 @@ def test_load_config_new_publish_dirs(options, tmp_path, default_config):
     assert list(sorted(files)) == [f1, f2]
     assert cfg == {
         "api_server": "http://127.0.0.1:8001",
+        "backend": "test",
         "backend_token": "token",
         "private_token": "private",
         "study_repo_url": "repo",
@@ -333,6 +337,7 @@ def test_load_config_old_publish_with_files(options, tmp_path, default_config):
     assert files == [f]
     assert cfg == {
         "api_server": "http://127.0.0.1:8001",
+        "backend": "test",
         "backend_token": "token",
         "private_token": "private",
         "study_repo_url": "repo",
@@ -356,6 +361,7 @@ def test_load_config_old_publish_with_git(
     assert files == [Path("a/b/committed.txt")]
     assert cfg == {
         "api_server": "http://127.0.0.1:8001",
+        "backend": "test",
         "backend_token": "token",
         "private_token": "private",
         "study_repo_url": "repo",

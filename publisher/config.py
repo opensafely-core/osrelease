@@ -162,6 +162,7 @@ def load_config(options, release_dir, env=os.environ):
             )
 
     config = {
+        "backend": cfg.get("BACKEND", "unknown"),
         "backend_token": backend_token,
         "private_token": cfg.get("PRIVATE_REPO_ACCESS_TOKEN"),
         "api_server": cfg.get("API_SERVER", "http://127.0.0.1:8001"),
