@@ -20,7 +20,7 @@ def test_successful_push_message(capsys, release_repo, study_repo):
     os.chdir(release_repo.name)
     files = config.git_files(Path(release_repo.name))
     release.main(
-        study_repo_url=study_repo.name, token="", files=files, commit_msg="msg"
+        study_repo_url=study_repo.name, token="", files=files, commit_msg="msg", user="user", backend="test",
     )
     captured = capsys.readouterr()
 
@@ -31,7 +31,7 @@ def test_release_repo_master_branch_unchanged(release_repo, study_repo):
     os.chdir(release_repo.name)
     files = config.git_files(Path(release_repo.name))
     release.main(
-        study_repo_url=study_repo.name, token="", files=files, commit_msg="msg"
+        study_repo_url=study_repo.name, token="", files=files, commit_msg="msg", user="user", backend="test",
     )
     os.chdir(study_repo.name),
     committed = Path("released_outputs/a/b/committed.txt")
@@ -46,7 +46,7 @@ def test_release_repo_release_branch_changed(release_repo, study_repo):
     os.chdir(release_repo.name)
     files = config.git_files(Path(release_repo.name))
     release.main(
-        study_repo_url=study_repo.name, token="", files=files, commit_msg="msg"
+        study_repo_url=study_repo.name, token="", files=files, commit_msg="msg", user="user", backend="test",
     )
     os.chdir(study_repo.name)
     subprocess.check_output(["git", "checkout", "release-candidates"])
@@ -64,10 +64,10 @@ def test_noop_message(capsys, release_repo, study_repo):
     os.chdir(release_repo.name)
     files = config.git_files(Path(release_repo.name))
     release.main(
-        study_repo_url=study_repo.name, token="", files=files, commit_msg="msg"
+        study_repo_url=study_repo.name, token="", files=files, commit_msg="msg", user="user", backend="test",
     )
     release.main(
-        study_repo_url=study_repo.name, token="", files=files, commit_msg="msg"
+        study_repo_url=study_repo.name, token="", files=files, commit_msg="msg", user="user", backend="test",
     )
     captured = capsys.readouterr()
     assert captured.out.splitlines()[-1] == "Nothing to do!"
@@ -93,3 +93,21 @@ def test_releaseno_args(tmp_path):
         release.release(options, tmp_path)
 
     assert "Could not find metadata/manifest.json" in str(ctx.value)
+
+
+def test_get_authenticated_repo_url_success():
+    repo = release.get_authenticated_repo_url("https://github.com/org/repo", "TOKEN", "USER", "BACKEND")
+    assert repo == "https://osrelease-BACKEND-USER:TOKEN@github-proxy.opensafely.org/org/repo"
+
+
+def test_get_authenticated_repo_url_not_github():
+    repo = "https://evil.com/org/repo"
+    new = release.get_authenticated_repo_url(repo, "TOKEN", "USER", "BACKEND")
+    assert repo == new
+
+
+def test_get_authenticated_repo_url_existing_creds():
+    with pytest.raises(AssertionError):
+        release.get_authenticated_repo_url("https://user@github.com/org/repo", "TOKEN", "USER", "BACKEND")
+    with pytest.raises(AssertionError):
+        release.get_authenticated_repo_url("https://user:pass@github.com/org/repo", "TOKEN", "USER", "BACKEND")
