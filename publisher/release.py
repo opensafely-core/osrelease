@@ -28,17 +28,29 @@ ch.setLevel(logging.DEBUG)
 logger.addHandler(ch)
 
 
-def add_github_auth_to_repo(repo, token):
-    """Add Basic HTTP Auth to a Github repo, from the environment.
+def get_authenticated_repo_url(repo, token, user, backend):
+    """Convert raw https github repo url into something we can use.
 
-    For example, `https://github.com/sebbacon/test.git` becomes
-    `https://<access_token>@github.com/sebbacon/test.git`
+    Validates it is a clean github.com url to prevent leaking creds elsewhere.
+
+    Switches to using the configured proxy url rather than github.com
+
+    Adds the supplied PAT token as basic auth. We abuse the fact that github
+    ignores the basic auth username to include some useful info to help us
+    debug proxy issues.
+
+    Example:
+
+    `https://github.com/sebbacon/test.git` becomes
+    `https://osrelease-$BACKEND-$USER:$TOKEN@github-proxy.opensafely.org/sebbacon/test.git`
     """
     if "github.com" in repo:
         parts = urllib.parse.urlparse(repo)
         assert not parts.username and not parts.password
         repo = urllib.parse.urlunparse(
-            parts._replace(netloc=f"{token}@{GITHUB_PROXY_DOMAIN}")
+            parts._replace(
+                netloc=f"osrelease-{backend}-{user}:{token}@{GITHUB_PROXY_DOMAIN}"
+            )
         )
     return repo
 
@@ -83,7 +95,7 @@ def make_index(subdir):
         return None
 
 
-def main(study_repo_url, token, files, commit_msg):
+def main(study_repo_url, token, files, commit_msg, user, backend):
     release_branch = "release-candidates"
     release_subdir = Path("released_outputs")
     workspace_dir = Path(os.getcwd())
@@ -92,7 +104,9 @@ def main(study_repo_url, token, files, commit_msg):
         try:
             os.chdir(d)
 
-            study_repo_url_with_pat = add_github_auth_to_repo(study_repo_url, token)
+            study_repo_url_with_pat = get_authenticated_repo_url(
+                study_repo_url, token, user, backend
+            )
             try:
                 run_cmd(["git", "clone", study_repo_url_with_pat, "repo"])
             except subprocess.CalledProcessError:
@@ -102,7 +116,11 @@ def main(study_repo_url, token, files, commit_msg):
 
             logger.debug(f"Checked out {study_repo_url} to repo/")
             os.chdir("repo")
-            checked_out = run_cmd(["git", "checkout", release_branch], raise_exc=False, output_failure=False) 
+            checked_out = run_cmd(
+                ["git", "checkout", release_branch],
+                raise_exc=False,
+                output_failure=False,
+            )
             if checked_out != 0:
                 run_cmd(["git", "checkout", "-b", release_branch])
             logger.debug("Copying files from current repo to the checked out one")
@@ -186,6 +204,8 @@ def release(options, release_dir):
                 cfg["private_token"],
                 files,
                 cfg["commit_message"],
+                cfg["username"],
+                cfg["backend"],
             )
 
             if released:
@@ -194,7 +214,7 @@ def release(options, release_dir):
                     cfg["username"],
                     release_dir,
                     files,
-               )
+                )
 
     except Exception as exc:
         if options.verbose > 0:
