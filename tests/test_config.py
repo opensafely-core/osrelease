@@ -3,8 +3,9 @@ import json
 import os
 import sys
 from pathlib import Path
-import responses
+
 import pytest
+import responses
 
 from publisher import config
 

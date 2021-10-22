@@ -7,7 +7,7 @@ from zipfile import ZipFile
 
 import pytest
 
-from publisher import upload, signing
+from publisher import signing, upload
 
 from .utils import UrlopenFixture
 

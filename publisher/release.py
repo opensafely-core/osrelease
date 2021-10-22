@@ -48,7 +48,9 @@ def get_authenticated_repo_url(repo, token, user, backend):
         parts = urllib.parse.urlparse(repo)
         assert not parts.username and not parts.password
         repo = urllib.parse.urlunparse(
-            parts._replace(netloc=f"osrelease-{backend}-{user}:{token}@{GITHUB_PROXY_DOMAIN}")
+            parts._replace(
+                netloc=f"osrelease-{backend}-{user}:{token}@{GITHUB_PROXY_DOMAIN}"
+            )
         )
     return repo
 
@@ -102,7 +104,9 @@ def main(study_repo_url, token, files, commit_msg, user, backend):
         try:
             os.chdir(d)
 
-            study_repo_url_with_pat = get_authenticated_repo_url(study_repo_url, token, user, backend)
+            study_repo_url_with_pat = get_authenticated_repo_url(
+                study_repo_url, token, user, backend
+            )
             try:
                 run_cmd(["git", "clone", study_repo_url_with_pat, "repo"])
             except subprocess.CalledProcessError:
@@ -112,7 +116,11 @@ def main(study_repo_url, token, files, commit_msg, user, backend):
 
             logger.debug(f"Checked out {study_repo_url} to repo/")
             os.chdir("repo")
-            checked_out = run_cmd(["git", "checkout", release_branch], raise_exc=False, output_failure=False) 
+            checked_out = run_cmd(
+                ["git", "checkout", release_branch],
+                raise_exc=False,
+                output_failure=False,
+            )
             if checked_out != 0:
                 run_cmd(["git", "checkout", "-b", release_branch])
             logger.debug("Copying files from current repo to the checked out one")
@@ -206,7 +214,7 @@ def release(options, release_dir):
                     cfg["username"],
                     release_dir,
                     files,
-               )
+                )
 
     except Exception as exc:
         if options.verbose > 0:

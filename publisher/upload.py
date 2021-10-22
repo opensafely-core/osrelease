@@ -7,8 +7,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-from publisher.signing import AuthToken
 from publisher.schema import Release, ReleaseFile, UrlFileName
+from publisher.signing import AuthToken
 
 
 class UploadException(Exception):
