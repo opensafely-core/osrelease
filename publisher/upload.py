@@ -23,7 +23,7 @@ def main(files, workspace, backend_token, user, api_server):
     workspace_url = f"{api_server}/workspace/{workspace}"
     auth_token = get_token(workspace_url, user, backend_token)
 
-    release_create_url = workspace_url + "/release/"
+    release_create_url = workspace_url + "/release"
 
     release = Release(
         files={
