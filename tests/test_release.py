@@ -15,7 +15,8 @@ from publisher import config, release
 # a `study_repo` is an empty git repo
 
 
-def test_successful_push_message(capsys, release_repo, study_repo):
+def test_successful_push_message(caplog, release_repo, study_repo):
+    caplog.set_level(logging.INFO)
     os.chdir(release_repo.name)
     files = config.git_files(Path(release_repo.name))
     release.main(
@@ -26,9 +27,8 @@ def test_successful_push_message(capsys, release_repo, study_repo):
         user="user",
         backend="test",
     )
-    captured = capsys.readouterr()
 
-    assert captured.out.startswith("Pushed new changes")
+    assert caplog.records[-1].msg.startswith("Pushed new changes")
 
 
 def test_release_repo_master_branch_unchanged(release_repo, study_repo):
@@ -74,7 +74,8 @@ def test_release_repo_release_branch_changed(release_repo, study_repo):
     assert not unstaged.exists()
 
 
-def test_noop_message(capsys, release_repo, study_repo):
+def test_noop_message(caplog, release_repo, study_repo):
+    caplog.set_level(logging.INFO)
     os.chdir(release_repo.name)
     files = config.git_files(Path(release_repo.name))
     release.main(
@@ -93,8 +94,7 @@ def test_noop_message(capsys, release_repo, study_repo):
         user="user",
         backend="test",
     )
-    captured = capsys.readouterr()
-    assert captured.out.splitlines()[-1] == "Nothing to do!"
+    assert caplog.records[-1].msg == "Nothing to do!"
 
 
 def test_redacting_logger(capsys):
