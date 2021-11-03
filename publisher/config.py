@@ -1,11 +1,14 @@
 import getpass
 import json
+import logging
 import os
 import subprocess
 import sys
 from pathlib import Path
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 def check_workplace_status(workspace_name):
@@ -108,7 +111,7 @@ def ensure_git_config():
         subprocess.check_output(["git", "config", "--global", "user.name"])
         subprocess.check_output(["git", "config", "--global", "user.email"])
     except subprocess.CalledProcessError:
-        print(
+        logger.info(
             "You need to tell git who you are by running:\n\n"
             'git config --global user.name "YOUR NAME"\n'
             'git config --global user.email "YOUR EMAIL"'
@@ -187,7 +190,7 @@ def load_config(options, release_dir, env=os.environ):
 
         if not files:
             if Path(".git").exists():
-                print("Found git repo, using deprecated git release flow.")
+                logger.info("Found git repo, using deprecated git release flow.")
                 files = git_files(release_dir)
             else:
                 sys.exit("No files provided to release")

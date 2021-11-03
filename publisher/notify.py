@@ -1,7 +1,10 @@
 import json
+import logging
 import os
 import urllib.error
 from urllib.request import Request, urlopen
+
+logger = logging.getLogger(__name__)
 
 JOB_SERVER = os.environ.get("JOB_SERVER", "https://jobs.opensafely.org")
 
@@ -33,7 +36,7 @@ def main(token, username, path, files):
         response = exc
 
     if response.status == 201:
-        print("Notification sent")
+        logging.info("Notification sent")
         return
 
     error_msg = response.read().decode("utf8")

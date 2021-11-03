@@ -105,14 +105,6 @@ def run_cmd(cmd, raise_exc=True, output_failure=True):
     return result.returncode
 
 
-def tree(directory):
-    print(f"+ {directory}")
-    for path in sorted(directory.rglob("*")):
-        depth = len(path.relative_to(directory).parts)
-        spacer = "    " * depth
-        print(f"{spacer}+ {path.name}")
-
-
 def make_index(subdir):
     lines = []
     for path in sorted(Path(subdir).rglob("*")):
@@ -199,15 +191,15 @@ def main(study_repo_url, token, files, commit_msg, user, backend):
                             release_branch,
                         ]
                     )
-                    print(
+                    logger.info(
                         "Pushed new changes. Open a PR at "
                         f"`{study_repo_url.replace('.git', '')}/compare/{release_branch}`"
                     )
                     released = True
                 else:
-                    print("Nothing to do!")
+                    logger.info("Nothing to do!")
             else:
-                print("Local repo is empty!")
+                logger.info("Local repo is empty!")
         finally:
             # ensure we do not maintain an open handle on the temp dir, or else
             # the clean up fails
@@ -221,7 +213,7 @@ def release(options, release_dir):
         files, cfg = config.load_config(options, release_dir)
 
         if not options.yes:
-            print("\n".join(str(f) for f in files))
+            logger.info("\n".join(str(f) for f in files))
             print()
             if (
                 input("The above files will be published. Continue? (y/N)").lower()
