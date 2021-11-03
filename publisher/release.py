@@ -24,6 +24,7 @@ logging_defaults = {
     "workspace": os.getcwd(),
 }
 
+
 def record_with_defaults(*args, **kwargs):
     record = logging.LogRecord(*args, **kwargs)
     record.__dict__.update(logging_defaults)
@@ -41,7 +42,7 @@ def configure_logging():
     user_output = RedactingStreamHandler()
     user_output.setLevel(logging.INFO)
     root.addHandler(user_output)
-    
+
     logfile = os.environ.get("LOGFILE")
     if logfile:
         # add user and workspace dir to LogRecords
@@ -50,7 +51,7 @@ def configure_logging():
         formatter = logging.Formatter(
             fmt="{asctime} '{message}' user={user} dir={workspace}",
             datefmt="%Y-%m-%d %H:%M:%S",
-            style='{',
+            style="{",
         )
         # use utc time
         formatter.convertor = time.gmtime

@@ -11,7 +11,6 @@ from urllib.request import Request, urlopen
 from publisher.schema import Release, ReleaseFile, UrlFileName
 from publisher.signing import AuthToken
 
-
 logger = logging.getLogger(__name__)
 
 

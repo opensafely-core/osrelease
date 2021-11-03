@@ -109,7 +109,10 @@ def test_redacting_logger(capsys):
 
     _, err = capsys.readouterr()
 
-    assert err == "https://xxxxxx@github-proxy.opensafely.org\nhttps://xxxxxx@github-proxy.opensafely.org\n"
+    assert (
+        err
+        == "https://xxxxxx@github-proxy.opensafely.org\nhttps://xxxxxx@github-proxy.opensafely.org\n"
+    )
 
 
 def test_releaseno_args(tmp_path):
