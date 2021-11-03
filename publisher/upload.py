@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+import logging
 import os
 import urllib.error
 from datetime import datetime, timedelta, timezone
@@ -9,6 +10,8 @@ from urllib.request import Request, urlopen
 
 from publisher.schema import Release, ReleaseFile, UrlFileName
 from publisher.signing import AuthToken
+
+logger = logging.getLogger(__name__)
 
 
 class UploadException(Exception):
@@ -40,23 +43,23 @@ def main(files, workspace, backend_token, user, api_server):
 
     release_id = response.headers["Release-Id"]
     release_url = response.headers["Location"]
-    print(f"Release {release_id} created with {len(files)} files.")
+    logger.info(f"Release {release_id} created with {len(files)} files.")
 
     try:
         for f in files:
             release_file = ReleaseFile(name=UrlFileName(f))
-            print(f" - uploading {f}... ", end="")
+            logger.info(f" - uploading {f}... ", end="")
             do_post(release_url, release_file.json(), auth_token)
-            print("done")
+            logger.info("done")
     except Forbidden:
         # they can create releases, but not upload them
-        print("permission denied")
-        print(
+        logger.info("permission denied")
+        logger.info(
             f"You do not have permission to upload the requested files for Release {release_id}.\n"
             f"The OpenSAFELY review team will review your requested Release."
         )
     else:
-        print(f"Uploaded {len(files)} files for Release {release_id}")
+        logger.info(f"Uploaded {len(files)} files for Release {release_id}")
 
 
 def get_token(url, user, backend_token):
@@ -69,7 +72,7 @@ def get_token(url, user, backend_token):
 
 
 def do_post(url, data, auth_token):
-
+    logger.debug(f"POST {url}: {data}")
     data = data.encode("utf8")
     request = Request(
         url=url,

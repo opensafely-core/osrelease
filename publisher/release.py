@@ -1,4 +1,5 @@
 import argparse
+import getpass
 import logging
 import os
 import re
@@ -7,6 +8,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.parse
 from pathlib import Path
 
@@ -15,17 +17,55 @@ from . import config, notify
 GITHUB_PROXY_DOMAIN = "github-proxy.opensafely.org"
 
 
+logger = logging.getLogger(__name__)
+
+logging_defaults = {
+    "user": getpass.getuser(),
+    "workspace": os.getcwd(),
+}
+
+
+def record_with_defaults(*args, **kwargs):
+    record = logging.LogRecord(*args, **kwargs)
+    record.__dict__.update(logging_defaults)
+    return record
+
+
+def configure_logging():
+    root = logging.getLogger()
+    # ensure the root logger processes every log message - we'll filter with
+    # handlers
+    root.setLevel(logging.NOTSET)
+
+    # info level logs go straight to the user using the default format, but
+    # redacted
+    user_output = RedactingStreamHandler()
+    user_output.setLevel(logging.INFO)
+    root.addHandler(user_output)
+
+    cfg = config.get_config(os.environ)
+    logfile = cfg.get("LOGFILE")
+    if logfile:
+        # add user and workspace dir to LogRecords
+        logging.setLogRecordFactory(record_with_defaults)
+        # now we can use them in formatting our log message
+        formatter = logging.Formatter(
+            fmt="{asctime} '{message}' user={user} dir={workspace}",
+            datefmt="%Y-%m-%d %H:%M:%S",
+            style="{",
+        )
+        # use utc time
+        formatter.convertor = time.gmtime
+        file_handler = logging.FileHandler(logfile)
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(formatter)
+        root.addHandler(file_handler)
+
+
 class RedactingStreamHandler(logging.StreamHandler):
     def emit(self, record):
         record.msg = re.sub(r"(.*://).+@", r"\1xxxxxx@", record.msg)
         super().emit(record)
-
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-ch = RedactingStreamHandler()
-ch.setLevel(logging.DEBUG)
-logger.addHandler(ch)
 
 
 def get_authenticated_repo_url(repo, token, user, backend):
@@ -67,14 +107,6 @@ def run_cmd(cmd, raise_exc=True, output_failure=True):
     return result.returncode
 
 
-def tree(directory):
-    print(f"+ {directory}")
-    for path in sorted(directory.rglob("*")):
-        depth = len(path.relative_to(directory).parts)
-        spacer = "    " * depth
-        print(f"{spacer}+ {path.name}")
-
-
 def make_index(subdir):
     lines = []
     for path in sorted(Path(subdir).rglob("*")):
@@ -109,7 +141,12 @@ def main(study_repo_url, token, files, commit_msg, user, backend):
             )
             try:
                 run_cmd(["git", "clone", study_repo_url_with_pat, "repo"])
-            except subprocess.CalledProcessError:
+            except subprocess.CalledProcessError as exc:
+                logger.debug(exc_info=True)
+                if exc.stdout:
+                    logger.debug(exc.stdout)
+                if exc.stderr:
+                    logger.debug(exc.stderr)
                 raise RuntimeError(
                     f"Unable to clone {study_repo_url} via {GITHUB_PROXY_DOMAIN}"
                 )
@@ -156,15 +193,15 @@ def main(study_repo_url, token, files, commit_msg, user, backend):
                             release_branch,
                         ]
                     )
-                    print(
+                    logger.info(
                         "Pushed new changes. Open a PR at "
                         f"`{study_repo_url.replace('.git', '')}/compare/{release_branch}`"
                     )
                     released = True
                 else:
-                    print("Nothing to do!")
+                    logger.info("Nothing to do!")
             else:
-                print("Local repo is empty!")
+                logger.info("Local repo is empty!")
         finally:
             # ensure we do not maintain an open handle on the temp dir, or else
             # the clean up fails
@@ -178,7 +215,7 @@ def release(options, release_dir):
         files, cfg = config.load_config(options, release_dir)
 
         if not options.yes:
-            print("\n".join(str(f) for f in files))
+            logger.info("\n".join(str(f) for f in files))
             print()
             if (
                 input("The above files will be published. Continue? (y/N)").lower()
@@ -217,6 +254,11 @@ def release(options, release_dir):
                 )
 
     except Exception as exc:
+        logger.debug(exc_info=True)
+        if exc.stdout:
+            logger.debug(exc.stdout)
+        if exc.stderr:
+            logger.debug(exc.stderr)
         if options.verbose > 0:
             raise
         sys.exit(exc)
@@ -230,6 +272,7 @@ parser.add_argument("files", nargs="*")
 
 
 def run():
+    configure_logging()
     options = parser.parse_args()
     release(options, Path(os.getcwd()))
 
