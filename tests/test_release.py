@@ -105,10 +105,11 @@ def test_redacting_logger(capsys):
     ch.setLevel(logging.DEBUG)
     logger.addHandler(ch)
     logger.info("https://token@github-proxy.opensafely.org")
+    logger.info("https://user:token@github-proxy.opensafely.org")
 
     _, err = capsys.readouterr()
 
-    assert err == "https://xxxxxx@github-proxy.opensafely.org\n"
+    assert err == "https://xxxxxx@github-proxy.opensafely.org\nhttps://xxxxxx@github-proxy.opensafely.org\n"
 
 
 def test_releaseno_args(tmp_path):
