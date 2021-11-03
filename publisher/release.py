@@ -43,7 +43,8 @@ def configure_logging():
     user_output.setLevel(logging.INFO)
     root.addHandler(user_output)
 
-    logfile = os.environ.get("LOGFILE")
+    cfg = config.get_config(os.environ)
+    logfile = cfg.get("LOGFILE")
     if logfile:
         # add user and workspace dir to LogRecords
         logging.setLogRecordFactory(record_with_defaults)
