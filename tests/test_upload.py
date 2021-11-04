@@ -89,4 +89,5 @@ def test_main_success(workspace_files, urlopen):
     )
 
     for f, r in zip(workspace_files, urlopen.requests[1:]):
-        assert json.loads(r.data) == {"name": str(f)}
+        normalized_path = str(f).replace("\\", "/")
+        assert json.loads(r.data) == {"name": normalized_path}
