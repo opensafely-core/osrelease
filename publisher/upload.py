@@ -48,9 +48,8 @@ def main(files, workspace, backend_token, user, api_server):
     try:
         for f in files:
             release_file = ReleaseFile(name=UrlFileName(f))
-            logger.info(f" - uploading {f}... ", end="")
+            logger.info(f"  - uploading {f}...")
             do_post(release_url, release_file.json(), auth_token)
-            logger.info("done")
     except Forbidden:
         # they can create releases, but not upload them
         logger.info("permission denied")

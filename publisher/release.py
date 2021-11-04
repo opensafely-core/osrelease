@@ -254,14 +254,18 @@ def release(options, release_dir):
                 )
 
     except Exception as exc:
-        logger.debug(exc_info=True)
-        if exc.stdout:
+        # summarise execption to users
+        logger.info(exc)
+        # log full exception to 
+        logger.debug(f"{exc}", exc_info=True)
+        # log full details of any uncaught CalledProcessErrors
+        if hasattr(exc, "stdout"):
             logger.debug(exc.stdout)
-        if exc.stderr:
+        if hasattr(exc, "stderr"):
             logger.debug(exc.stderr)
         if options.verbose > 0:
             raise
-        sys.exit(exc)
+        sys.exit(1)
 
 
 parser = argparse.ArgumentParser()
