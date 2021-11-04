@@ -30,7 +30,7 @@ def main(files, workspace, backend_token, user, api_server):
 
     release = Release(
         files={
-            UrlFileName(f): hashlib.sha256(f.read_bytes()).hexdigest() for f in files
+            f: hashlib.sha256(f.read_bytes()).hexdigest() for f in files
         }
     )
 
@@ -47,8 +47,8 @@ def main(files, workspace, backend_token, user, api_server):
 
     try:
         for f in files:
-            release_file = ReleaseFile(name=UrlFileName(f))
-            logger.info(f"  - uploading {f}...")
+            release_file = ReleaseFile(name=f)
+            logger.info(f" - uploading {f}...")
             do_post(release_url, release_file.json(), auth_token)
     except Forbidden:
         # they can create releases, but not upload them

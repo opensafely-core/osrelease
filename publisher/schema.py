@@ -61,4 +61,4 @@ class ReleaseFile(BaseModel):
     bytes itself.
     """
 
-    name: str
+    name: UrlFileName
