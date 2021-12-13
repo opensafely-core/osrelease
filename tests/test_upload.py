@@ -61,7 +61,7 @@ def test_main_success_no_upload_permission(workspace_files, urlopen):
     upload.main(workspace_files, "workspace", "token" * 10, "user", "http://hatch")
 
     request1 = urlopen.requests[0]
-    assert request1.full_url == "http://hatch/workspace/workspace/release/"
+    assert request1.full_url == "http://hatch/workspace/workspace/release"
     files = json.loads(request1.data)["files"]
     assert list(sorted(files.keys())) == list(
         sorted(["foo.txt", "dir/bar.txt", "outputs/data.csv"])
@@ -83,7 +83,7 @@ def test_main_success(workspace_files, urlopen):
     upload.main(workspace_files, "workspace", backend_token, "user", "http://hatch")
 
     request = urlopen.requests[0]
-    assert request.full_url == "http://hatch/workspace/workspace/release/"
+    assert request.full_url == "http://hatch/workspace/workspace/release"
     token = signing.AuthToken.verify(
         request.headers["Authorization"], backend_token, salt="hatch"
     )
