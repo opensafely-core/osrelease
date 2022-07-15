@@ -256,7 +256,7 @@ def release(options, release_dir):
     except Exception as exc:
         # summarise execption to users
         logger.info(exc)
-        # log full exception to 
+        # log full exception to
         logger.debug(f"{exc}", exc_info=True)
         # log full details of any uncaught CalledProcessErrors
         if hasattr(exc, "stdout"):
@@ -271,7 +271,8 @@ def release(options, release_dir):
 parser = argparse.ArgumentParser()
 parser.add_argument("--verbose", "-v", action="count", default=0)
 parser.add_argument("--yes", "-y", action="store_true")
-parser.add_argument("--new-publish", "-n", action="store_true")
+parser.add_argument("--new-publish", "-n", action="store_true", default=None)
+parser.add_argument("--github-publish", "--gh", action="store_true", default=False, help=argparse.SUPPRESS)
 parser.add_argument("files", nargs="*")
 
 

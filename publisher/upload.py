@@ -29,9 +29,7 @@ def main(files, workspace, backend_token, user, api_server):
     release_create_url = workspace_url + "/release"
 
     release = Release(
-        files={
-            f: hashlib.sha256(f.read_bytes()).hexdigest() for f in files
-        }
+        files={f: hashlib.sha256(f.read_bytes()).hexdigest() for f in files}
     )
 
     try:
