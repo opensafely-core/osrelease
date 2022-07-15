@@ -150,18 +150,26 @@ def load_config(options, release_dir, env=os.environ):
     local_username = get_current_user()
     github_username = allowed_usernames.get(local_username, None)
 
-    # we can force new_publish, or else we query job-server to find out which to use
-    if not options.new_publish:
-        options.new_publish = check_workplace_status(workspace)
-
     if github_username is None:
-        # we do not know who they are
-        if options.new_publish:
-            sys.exit("You are not in the configured list of users to use osrelease.")
-        else:
+        sys.exit(
+            "Your user is not in the local Level 4 list of github users. Please ask tech-support to add your github username."
+        )
+
+    if options.github_publish:
+        ensure_git_config()
+        private_token = cfg.get("PRIVATE_REPO_ACCESS_TOKEN")
+        if not private_token:
             sys.exit(
-                "Only members of the core OpenSAFELY team can publish outputs. "
-                "Please email disclosurecontrol@opensafely.org to request a release.\n"
+                "No PRIVATE_REPO_ACCESS_TOKEN env var set to enable github publish"
+            )
+    elif options.new_publish is None:
+        # user has specified neither --gh or -n - check what the default is for this workspace.
+        uses_new_flow = check_workplace_status(workspace)
+        if not uses_new_flow:
+            print(
+                "Warning: this workspace is configured to use github releases by default, but this\n"
+                "method is no longer allowed, so releasing to jobs.opensafely.org instead.\n"
+                "To remove this warning, or if you really really do need to release to github, contact tech-support"
             )
 
     config = {
@@ -178,21 +186,7 @@ def load_config(options, release_dir, env=os.environ):
     if not config["backend_token"]:
         sys.exit("Could not load BACKEND_TOKEN from config")
 
-    if options.new_publish:
-        # must provide files in new publish
-        if not files:
-            sys.exit("No files provided to release")
-    else:
-        ensure_git_config()
-        # deprecated github publishing
-        if not config["private_token"]:
-            sys.exit("Could not load PRIVATE_REPO_ACCESS_TOKEN token from config file")
-
-        if not files:
-            if Path(".git").exists():
-                logger.info("Found git repo, using deprecated git release flow.")
-                files = git_files(release_dir)
-            else:
-                sys.exit("No files provided to release")
+    if not files:
+        sys.exit("No files provided to release")
 
     return files, config
