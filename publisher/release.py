@@ -223,19 +223,7 @@ def release(options, release_dir):
             ):
                 sys.exit()
 
-        if options.new_publish:
-            # defer loading temporarily as it has dependencies that are not in
-            # place in prod
-            from publisher import upload
-
-            released = upload.main(
-                files,
-                cfg["workspace"],
-                cfg["backend_token"],
-                cfg["username"],
-                cfg["api_server"],
-            )
-        else:
+        if options.github_publish:
             released = main(
                 cfg["study_repo_url"],
                 cfg["private_token"],
@@ -252,6 +240,18 @@ def release(options, release_dir):
                     release_dir,
                     files,
                 )
+        else:
+            # defer loading temporarily as it has dependencies that are not in
+            # place in prod
+            from publisher import upload
+
+            released = upload.main(
+                files,
+                cfg["workspace"],
+                cfg["backend_token"],
+                cfg["username"],
+                cfg["api_server"],
+            )
 
     except Exception as exc:
         # summarise execption to users
@@ -272,7 +272,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--verbose", "-v", action="count", default=0)
 parser.add_argument("--yes", "-y", action="store_true")
 parser.add_argument("--new-publish", "-n", action="store_true", default=None)
-parser.add_argument("--github-publish", "--gh", action="store_true", default=False, help=argparse.SUPPRESS)
+parser.add_argument(
+    "--github-publish",
+    "--gh",
+    action="store_true",
+    default=False,
+    help=argparse.SUPPRESS,
+)
 parser.add_argument("files", nargs="*")
 
 
