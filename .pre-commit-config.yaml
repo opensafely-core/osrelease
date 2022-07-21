@@ -8,12 +8,12 @@ repos:
     - id: black
 
   - repo: https://github.com/PyCQA/flake8
-    rev: 3.8.3
+    rev: 3.8.4
     hooks:
     - id: flake8
 
   - repo: https://github.com/PyCQA/isort
-    rev: v5.3.0
+    rev: 5.6.4
     hooks:
     - id: isort
 
