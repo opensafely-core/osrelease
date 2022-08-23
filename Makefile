@@ -31,6 +31,11 @@ lint:
 run:
 	python manage.py runserver
 
+.PHONY: test
+test:
+	python -m pytest tests/
+
+
 .PHONY: setup
 setup:
 	pip install -r requirements.dev.txt
