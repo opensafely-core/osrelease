@@ -36,14 +36,14 @@ def configure_logging():
     # ensure the root logger processes every log message - we'll filter with
     # handlers
     root.setLevel(logging.NOTSET)
+    cfg = config.get_config(os.environ)
 
     # info level logs go straight to the user using the default format, but
     # redacted
-    user_output = RedactingStreamHandler()
+    user_output = RedactingStreamHandler(cfg["private_token"])
     user_output.setLevel(logging.INFO)
     root.addHandler(user_output)
 
-    cfg = config.get_config(os.environ)
     logfile = cfg.get("LOGFILE")
     if logfile:
         # add user and workspace dir to LogRecords
@@ -63,8 +63,13 @@ def configure_logging():
 
 
 class RedactingStreamHandler(logging.StreamHandler):
+    def __init__(self, key, *args, **kwargs):
+        self.__key = key
+        super().__init__(*args, **kwargs)
+
     def emit(self, record):
-        record.msg = re.sub(r"(.*://).+@", r"\1xxxxxx@", record.msg)
+        if isinstance(record.msg, str):
+            record.msg = re.sub(self.__key, "xxxxxx", record.msg)
         super().emit(record)
 
 
