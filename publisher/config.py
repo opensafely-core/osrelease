@@ -113,22 +113,6 @@ def load_config(options, release_dir, env=os.environ):
             "Could not find metadata/manifest.json - are you in a workspace directory?"
         )
 
-    workspace = manifest["workspace"]
-    backend_token = cfg.get("BACKEND_TOKEN")
-
-    files = []
-    for f in options.files:
-        path = Path(f)
-        if path.is_dir():
-            files.extend(f for f in path.glob("**/*") if f.is_file())
-        else:
-            files.append(path)
-
-    not_exist = [p for p in files if not p.exists()]
-    if not_exist:
-        filelist = ", ".join(str(s) for s in not_exist)
-        sys.exit(f"Files do not exist: {filelist}")
-
     allowed_usernames = cfg.get("ALLOWED_USERS", {})
     if isinstance(allowed_usernames, list):
         allowed_usernames = {u: u for u in allowed_usernames}
@@ -140,6 +124,19 @@ def load_config(options, release_dir, env=os.environ):
         sys.exit(
             "Your user is not in the local Level 4 list of github users. Please ask tech-support to add your github username."
         )
+
+    workspace = manifest["workspace"]
+    backend_token = cfg.get("BACKEND_TOKEN")
+    config = {
+        "backend": cfg.get("BACKEND", "unknown"),
+        "backend_token": backend_token,
+        "private_token": cfg.get("PRIVATE_REPO_ACCESS_TOKEN"),
+        "api_server": cfg.get("API_SERVER", "http://127.0.0.1:8001"),
+        "study_repo_url": manifest["repo"],
+        "workspace": workspace,
+        "username": github_username,
+        "commit_message": f"Released from {release_dir} by {github_username}",
+    }
 
     if options.github_publish:
         ensure_git_config()
@@ -158,21 +155,54 @@ def load_config(options, release_dir, env=os.environ):
                 "To remove this warning, or if you really really do need to release to github, contact tech-support"
             )
 
-    config = {
-        "backend": cfg.get("BACKEND", "unknown"),
-        "backend_token": backend_token,
-        "private_token": cfg.get("PRIVATE_REPO_ACCESS_TOKEN"),
-        "api_server": cfg.get("API_SERVER", "http://127.0.0.1:8001"),
-        "study_repo_url": manifest["repo"],
-        "workspace": workspace,
-        "username": github_username,
-        "commit_message": f"Released from {release_dir} by {github_username}",
-    }
-
     if not config["backend_token"]:
         sys.exit("Could not load BACKEND_TOKEN from config")
+
+    return config
+
+
+def get_files(options, cfg):
+    files = []
+    # upload files to an exisiting release
+    if options.release:
+        # avoid circular import
+        from publisher import schema, upload
+
+        workspace_url, auth_token = upload.get_auth(cfg)
+        release_url = f"{workspace_url}/release/{options.release}"
+        response, body = upload.release_hatch("GET", release_url, None, auth_token)
+        index = schema.FileList(**json.loads(body))
+
+        if options.files:
+            errors = []
+            for f in options.files:
+                metadata = index.get(f)
+                if metadata is None:
+                    errors.append(
+                        f"Could not find file {f} in release {options.release}"
+                    )
+
+            if errors:
+                sys.exit("\n".join(errors))
+
+            files = options.files
+        else:
+            files = [f.name for f in index.files]
+    else:
+        # release and upload files in one step, check paths locally
+        for f in options.files:
+            path = Path(f)
+            if path.is_dir():
+                files.extend(f for f in path.glob("**/*") if f.is_file())
+            else:
+                files.append(path)
+
+        not_exist = [p for p in files if not p.exists()]
+        if not_exist:
+            filelist = ", ".join(str(s) for s in not_exist)
+            sys.exit(f"Files do not exist: {filelist}")
 
     if not files:
         sys.exit("No files provided to release")
 
-    return files, config
+    return files

@@ -10,8 +10,6 @@ import pytest
 
 from publisher import schema, signing, upload
 
-from .utils import UrlopenFixture
-
 
 @pytest.fixture
 def workspace_files(tmp_path):
@@ -38,47 +36,36 @@ def workspace_files(tmp_path):
 
 
 @pytest.fixture
-def urlopen(monkeypatch):
-    data = UrlopenFixture()
-    monkeypatch.setattr(upload, "urlopen", data.urlopen)
-    return data
+def cfg():
+    return {
+        "workspace": "workspace",
+        "backend_token": "token" * 10,
+        "username": "user",
+        "api_server": "http://hatch",
+    }
 
 
-def index_body(files, tmp_path):
-    index = {"files": []}
-    for f in files:
-        path = tmp_path / f
-        index["files"].append(
-            {
-                "name": str(f),
-                "size": path.stat().st_size,
-                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-                "date": path.stat().st_mtime,
-            }
-        )
-    return json.dumps(index)
+def test_main_forbidden(workspace, urlopen, cfg):
+    workspace.add_urlopen_index(urlopen)
 
-
-def test_main_forbidden(workspace_files, urlopen, tmp_path):
-    body = index_body(workspace_files, tmp_path)
-    urlopen.add_response(HTTPStatus.OK, body=body)
     urlopen.add_response(HTTPStatus.FORBIDDEN)
 
     with pytest.raises(upload.UploadException) as exc:
-        upload.main(workspace_files, "workspace", "token" * 10, "user", "http://hatch")
+        upload.main(workspace.files, cfg)
 
     assert "User user does not have permission" in str(exc.value)
 
 
-def test_main_success_no_upload_permission(workspace_files, urlopen, tmp_path):
-    body = index_body(workspace_files, tmp_path)
-    urlopen.add_response(HTTPStatus.OK, body=body)
-    urlopen.add_response(
-        HTTPStatus.CREATED, headers={"Location": "http://hatch/release/id"}
-    )
+def test_main_success_no_upload_permission(workspace, urlopen, cfg):
+    workspace.write("foo.txt", "foo")
+    workspace.write("dir/bar.txt", "bar")
+    workspace.write("outputs/data.csv", "data")
+
+    workspace.add_urlopen_index(urlopen)
+    urlopen.add_response(HTTPStatus.CREATED, headers={"Release-Id": "test_release_id"})
     urlopen.add_response(HTTPStatus.FORBIDDEN)
 
-    upload.main(workspace_files, "workspace", "token" * 10, "user", "http://hatch")
+    upload.main(workspace.files, cfg)
 
     request1 = urlopen.requests[1]
     assert request1.full_url == "http://hatch/workspace/workspace/release"
@@ -88,23 +75,25 @@ def test_main_success_no_upload_permission(workspace_files, urlopen, tmp_path):
     )
 
     request2 = urlopen.requests[2]
-    assert request2.full_url == "http://hatch/release/id"
-
-
-def test_main_success(workspace_files, urlopen, tmp_path):
-
-    body = index_body(workspace_files, tmp_path)
-    urlopen.add_response(HTTPStatus.OK, body=body)
-
-    urlopen.add_response(
-        HTTPStatus.CREATED, headers={"Location": "http://hatch/release/id"}
+    assert (
+        request2.full_url == "http://hatch/workspace/workspace/release/test_release_id"
     )
+
+
+def test_main_success(workspace, urlopen, cfg):
+    workspace.write("dir/bar.txt", "bar")
+    workspace.write("foo.txt", "foo")
+    workspace.write("outputs/data.csv", "data")
+
+    workspace.add_urlopen_index(urlopen)
+
+    urlopen.add_response(HTTPStatus.CREATED, headers={"Release-Id": "test_release_id"})
     urlopen.add_response(HTTPStatus.CREATED)
     urlopen.add_response(HTTPStatus.CREATED)
     urlopen.add_response(HTTPStatus.CREATED)
     backend_token = "token" * 10
 
-    upload.main(workspace_files, "workspace", backend_token, "user", "http://hatch")
+    upload.main(workspace.files, cfg)
 
     request = urlopen.requests[1]
     assert request.full_url == "http://hatch/workspace/workspace/release"
@@ -113,9 +102,8 @@ def test_main_success(workspace_files, urlopen, tmp_path):
     )
     filelist = schema.FileList(**json.loads(request.data))
     assert filelist.metadata == {"tool": "osrelease"}
-    assert filelist.files[0].name == "foo.txt"
+    assert filelist.files[0].name == "dir/bar.txt"
     assert filelist.files[0].metadata == {"tool": "osrelease"}
-
-    for f, r in zip(workspace_files, urlopen.requests[2:]):
+    for f, r in zip(workspace.files, urlopen.requests[2:]):
         normalized_path = str(f).replace("\\", "/")
         assert json.loads(r.data) == {"name": normalized_path}

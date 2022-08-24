@@ -59,7 +59,7 @@ def default_config(tmp_path, monkeypatch):
     env = write_config(
         tmp_path,
         BACKEND="test",
-        BACKEND_TOKEN="token",
+        BACKEND_TOKEN="token" * 10,
         ALLOWED_USERS={getpass.getuser(): "github-user"},
     )
     monkeypatch.setitem(os.environ, "OSRELEASE_CONFIG", env["OSRELEASE_CONFIG"])
@@ -84,7 +84,8 @@ def test_config_file_cwd(tmp_path):
         os.chdir(current)
 
 
-def test_config_file_venv(tmp_path):
+def test_config_file_venv(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     cfg = tmp_path / "osrelease_config.py"
     cfg.write_text("FOO=1")
     env = {"VIRTUAL_ENV": str(tmp_path)}
@@ -92,6 +93,7 @@ def test_config_file_venv(tmp_path):
 
 
 def test_config_file_module(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     cfg = tmp_path / "osrelease_config.py"
     executable = tmp_path / "bin" / "python"
     monkeypatch.setattr(sys, "executable", str(executable))
@@ -108,16 +110,6 @@ def test_get_current_user(monkeypatch):
     if "GITHUB_ACTIONS" not in os.environ:
         monkeypatch.setattr("publisher.config.getpass.getuser", lambda: "jobrunner")
         assert config.get_current_user() == real_user
-
-
-def test_load_config_files_not_exist(options, tmp_path):
-    write_manifest(tmp_path)
-    options.files = ["notexist"]
-
-    with pytest.raises(SystemExit) as exc_info:
-        config.load_config(options, tmp_path)
-
-    assert "Files do not exist: notexist" in str(exc_info.value)
 
 
 def test_check_status(new_release_flow):
@@ -154,15 +146,6 @@ def test_load_config_no_backend_token(options, tmp_path, new_release_flow):
         config.load_config(options, tmp_path, env=env)
 
     assert "Could not load BACKEND_TOKEN" in str(exc_info.value)
-
-
-def test_load_config_no_files(options, default_config, tmp_path, new_release_flow):
-    write_manifest(tmp_path)
-
-    with pytest.raises(SystemExit) as exc_info:
-        config.load_config(options, tmp_path)
-
-    assert "No files provided to release" in str(exc_info.value)
 
 
 def test_load_config_old_publish_no_private_token(options, tmp_path):
@@ -219,17 +202,13 @@ def test_load_config_username_allowed_users_list_still_blocks(
 
 def test_load_config_new_publish_as_arg(options, tmp_path, default_config):
     write_manifest(tmp_path)
-    f = tmp_path / "file.txt"
-    f.write_text("test")
-    options.files = [str(f)]
     options.new_publish = True
 
-    files, cfg = config.load_config(options, tmp_path)
-    assert files == [f]
+    cfg = config.load_config(options, tmp_path)
     assert cfg == {
         "api_server": "http://127.0.0.1:8001",
         "backend": "test",
-        "backend_token": "token",
+        "backend_token": "token" * 10,
         "private_token": None,
         "study_repo_url": "repo",
         "workspace": "workspace",
@@ -241,17 +220,13 @@ def test_load_config_new_publish_as_arg(options, tmp_path, default_config):
 def test_load_config_new_publish_as_api_call(options, tmp_path, default_config):
     options.new_publish = False
     write_manifest(tmp_path)
-    f = tmp_path / "file.txt"
-    f.write_text("test")
-    options.files = [str(f)]
 
     # options.new_publish overruled by API call to job server
-    files, cfg = config.load_config(options, tmp_path)
-    assert files == [f]
+    cfg = config.load_config(options, tmp_path)
     assert cfg == {
         "api_server": "http://127.0.0.1:8001",
         "backend": "test",
-        "backend_token": "token",
+        "backend_token": "token" * 10,
         "private_token": None,
         "study_repo_url": "repo",
         "workspace": "workspace",
@@ -269,9 +244,6 @@ def test_load_config_new_publish_job_server_down(options, tmp_path, default_conf
         status=500,
     )
     write_manifest(tmp_path)
-    f = tmp_path / "file.txt"
-    f.write_text("test")
-    options.files = [str(f)]
 
     with pytest.raises(SystemExit) as exc_info:
         config.load_config(options, tmp_path)
@@ -279,7 +251,7 @@ def test_load_config_new_publish_job_server_down(options, tmp_path, default_conf
     assert "Job Server down" in str(exc_info.value)
 
 
-def test_load_config_new_publish_dirs(options, tmp_path, default_config):
+def test_get_files_new_dirs(options, tmp_path, default_config):
     write_manifest(tmp_path)
     d = tmp_path / "dir"
     d.mkdir()
@@ -290,42 +262,72 @@ def test_load_config_new_publish_dirs(options, tmp_path, default_config):
     options.files = [str(d)]
     options.new_publish = True
 
-    files, cfg = config.load_config(options, tmp_path)
+    cfg = config.load_config(options, tmp_path)
+    files = config.get_files(options, cfg)
     assert list(sorted(files)) == [f1, f2]
-    assert cfg == {
-        "api_server": "http://127.0.0.1:8001",
-        "backend": "test",
-        "backend_token": "token",
-        "private_token": None,
-        "study_repo_url": "repo",
-        "workspace": "workspace",
-        "username": "github-user",
-        "commit_message": f"Released from {tmp_path} by github-user",
-    }
 
 
-@responses.activate
-def test_load_config_old_publish_with_files(options, tmp_path, default_config):
-    responses.add(
-        responses.GET,
-        f"https://jobs.opensafely.org/api/v2/workspaces/workspace/status",
-        json={"uses_new_release_flow": False},
-        status=200,
-    )
+def test_get_files_no_files(options, default_config, tmp_path):
     write_manifest(tmp_path)
-    f = tmp_path / "file.txt"
-    f.write_text("test")
-    options.files = [str(f)]
+    options.new_publish = True
 
-    files, cfg = config.load_config(options, tmp_path)
-    assert files == [f]
-    assert cfg == {
-        "api_server": "http://127.0.0.1:8001",
-        "backend": "test",
-        "backend_token": "token",
-        "private_token": None,
-        "study_repo_url": "repo",
-        "workspace": "workspace",
-        "username": "github-user",
-        "commit_message": f"Released from {tmp_path} by github-user",
-    }
+    cfg = config.load_config(options, tmp_path)
+    with pytest.raises(SystemExit) as exc_info:
+        config.get_files(options, tmp_path)
+
+    assert "No files provided to release" in str(exc_info.value)
+
+
+def test_get_files_not_exist(options, tmp_path, default_config):
+    write_manifest(tmp_path)
+    options.files = ["notexist"]
+    options.new_publish = True
+
+    cfg = config.load_config(options, tmp_path)
+    with pytest.raises(SystemExit) as exc_info:
+        config.get_files(options, cfg)
+
+    assert "Files do not exist: notexist" in str(exc_info.value)
+
+
+def test_get_files_release_no_files(options, workspace, urlopen, default_config):
+
+    release = workspace.create_release("release_id")
+    release.add_urlopen_index(urlopen)
+    options.new_publish = True
+    options.release = release.id
+
+    cfg = config.load_config(options, workspace.path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        config.get_files(options, cfg)
+
+    assert "No files" in str(exc_info.value)
+
+
+def test_get_files_release_all_files(options, workspace, urlopen, default_config):
+    release = workspace.create_release("release_id")
+    release.write("foo.txt", "foo")
+    release.write("bar.txt", "bar")
+    release.add_urlopen_index(urlopen)
+    options.new_publish = True
+    options.release = release.id
+
+    cfg = config.load_config(options, workspace.path)
+
+    assert config.get_files(options, cfg) == ["bar.txt", "foo.txt"]
+
+
+def test_get_files_release_subset_files(options, workspace, urlopen, default_config):
+    release = workspace.create_release("release_id")
+    release.write("foo.txt", "foo")
+    release.write("bar.txt", "bar")
+    release.add_urlopen_index(urlopen)
+    options.new_publish = True
+    options.release = release.id
+    options.files = ["foo.txt"]
+
+    cfg = config.load_config(options, workspace.path)
+
+    assert config.get_files(options, cfg) == ["foo.txt"]
+

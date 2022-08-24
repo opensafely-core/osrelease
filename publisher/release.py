@@ -222,7 +222,8 @@ def main(study_repo_url, token, files, commit_msg, user, backend):
 
 def release(options, release_dir):
     try:
-        files, cfg = config.load_config(options, release_dir)
+        cfg = config.load_config(options, release_dir)
+        files = get_files(options, cfg)
 
         if not options.yes:
             logger.info("\n".join(str(f) for f in files))
@@ -255,13 +256,10 @@ def release(options, release_dir):
             # place in prod
             from publisher import upload
 
-            released = upload.main(
-                files,
-                cfg["workspace"],
-                cfg["backend_token"],
-                cfg["username"],
-                cfg["api_server"],
-            )
+            if options.release:
+                upload.upload_to_release(files, release, cfg)
+            else:
+                upload.main(files, cfg)
 
     except Exception as exc:
         # summarise execption to users
@@ -282,6 +280,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--verbose", "-v", action="count", default=0)
 parser.add_argument("--yes", "-y", action="store_true")
 parser.add_argument("--new-publish", "-n", action="store_true", default=None)
+parser.add_argument("--release", "-r", help="release to release files from")
 parser.add_argument(
     "--github-publish",
     "--gh",
