@@ -101,7 +101,7 @@ def test_redacting_logger(capsys):
 
     logger = logging.getLogger(__name__ + ".test_redacting_logger")
     logger.setLevel(logging.DEBUG)
-    ch = release.RedactingStreamHandler()
+    ch = release.RedactingStreamHandler("token")
     ch.setLevel(logging.DEBUG)
     logger.addHandler(ch)
     logger.info("https://token@github-proxy.opensafely.org")
@@ -111,7 +111,7 @@ def test_redacting_logger(capsys):
 
     assert (
         err
-        == "https://xxxxxx@github-proxy.opensafely.org\nhttps://xxxxxx@github-proxy.opensafely.org\n"
+        == "https://xxxxxx@github-proxy.opensafely.org\nhttps://user:xxxxxx@github-proxy.opensafely.org\n"
     )
 
 

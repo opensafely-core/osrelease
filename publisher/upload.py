@@ -27,7 +27,8 @@ def main(files, workspace, backend_token, user, api_server):
     workspace_url = f"{api_server}/workspace/{workspace}"
     auth_token = get_token(workspace_url, user, backend_token)
 
-    response, body = release_hatch("GET", workspace_url, None, auth_token)
+    index_url = workspace_url + "/current"
+    response, body = release_hatch("GET", index_url, None, auth_token)
     index = FileList(**json.loads(body))
     filelist = FileList(files=[], metadata={"tool": "osrelease"})
 
@@ -36,7 +37,7 @@ def main(files, workspace, backend_token, user, api_server):
         if filedata is None:
             # shouldn't happen, as we've just verified it exists, but best be careful
             sys.exit(f"cannot find file {f}")
-
+        filedata.metadata = {"tool": "osrelease"}
         filelist.files.append(filedata)
 
     release_create_url = workspace_url + "/release"

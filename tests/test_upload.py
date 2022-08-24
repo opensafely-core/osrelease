@@ -114,6 +114,7 @@ def test_main_success(workspace_files, urlopen, tmp_path):
     filelist = schema.FileList(**json.loads(request.data))
     assert filelist.metadata == {"tool": "osrelease"}
     assert filelist.files[0].name == "foo.txt"
+    assert filelist.files[0].metadata == {"tool": "osrelease"}
 
     for f, r in zip(workspace_files, urlopen.requests[2:]):
         normalized_path = str(f).replace("\\", "/")
