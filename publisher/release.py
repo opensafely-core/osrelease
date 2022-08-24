@@ -38,9 +38,14 @@ def configure_logging():
     root.setLevel(logging.NOTSET)
     cfg = config.get_config(os.environ)
 
-    # info level logs go straight to the user using the default format, but
-    # redacted
-    user_output = RedactingStreamHandler(cfg["private_token"])
+    private_token = config.get("PRIVATE_REPO_ACCESS_TOKEN")
+    if private_token:
+        # info level logs go straight to the user using the default format, but
+        # redacted
+        user_output = RedactingStreamHandler(private_token)
+    else:
+        user_output = logging.StreamHandler()
+
     user_output.setLevel(logging.INFO)
     root.addHandler(user_output)
 
