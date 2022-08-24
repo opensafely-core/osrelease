@@ -3,12 +3,13 @@ import io
 import json
 import logging
 import os
+import sys
 import urllib.error
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-from publisher.schema import Release, ReleaseFile, UrlFileName
+from publisher.schema import FileList, FileMetadata, ReleaseFile
 from publisher.signing import AuthToken
 
 logger = logging.getLogger(__name__)
@@ -26,14 +27,24 @@ def main(files, workspace, backend_token, user, api_server):
     workspace_url = f"{api_server}/workspace/{workspace}"
     auth_token = get_token(workspace_url, user, backend_token)
 
+    response, body = release_hatch("GET", workspace_url, None, auth_token)
+    index = FileList(**json.loads(body))
+    filelist = FileList(files=[], metadata={"tool": "osrelease"})
+
+    for f in files:
+        filedata = index.get(f)
+        if filedata is None:
+            # shouldn't happen, as we've just verified it exists, but best be careful
+            sys.exit(f"cannot find file {f}")
+
+        filelist.files.append(filedata)
+
     release_create_url = workspace_url + "/release"
 
-    release = Release(
-        files={f: hashlib.sha256(f.read_bytes()).hexdigest() for f in files}
-    )
-
     try:
-        response = do_post(release_create_url, release.json(), auth_token)
+        response, _ = release_hatch(
+            "POST", release_create_url, filelist.json(), auth_token
+        )
     except Forbidden:
         raise UploadException(
             f"User {user} does not have permission to create a release"
@@ -47,7 +58,7 @@ def main(files, workspace, backend_token, user, api_server):
         for f in files:
             release_file = ReleaseFile(name=f)
             logger.info(f" - uploading {f}...")
-            do_post(release_url, release_file.json(), auth_token)
+            release_hatch("POST", release_url, release_file.json(), auth_token)
     except Forbidden:
         # they can create releases, but not upload them
         logger.info("permission denied")
@@ -68,19 +79,22 @@ def get_token(url, user, backend_token):
     return token.sign(backend_token, salt="hatch")
 
 
-def do_post(url, data, auth_token):
-    logger.debug(f"POST {url}: {data}")
-    data = data.encode("utf8")
+def release_hatch(method, url, data, auth_token):
+    logger.debug(f"{method} {url}: {data}")
+    headers = {
+        "Accept": "application/json",
+        "Authorization": auth_token,
+    }
+    if data:
+        data = data.encode("utf8")
+        headers["Content-Length"] = len(data)
+        headers["Content-Type"] = "application/json"
+
     request = Request(
         url=url,
+        method=method,
         data=data,
-        method="POST",
-        headers={
-            "Accept": "application/json",
-            "Content-Length": len(data),
-            "Content-Type": "application/json",
-            "Authorization": auth_token,
-        },
+        headers=headers,
     )
 
     try:
@@ -89,21 +103,19 @@ def do_post(url, data, auth_token):
         # HTTPErrors can be treated as HTTPResponse
         response = exc
 
-    if response.status == 201:
-        return response
+    body = response.read().decode("utf8")
+
+    if response.status in (200, 201):
+        return response, body
 
     if response.status == 403:
         raise Forbidden()
 
-    error_msg = response.read().decode("utf8")
-
     # try get more helpful error message
     if response.headers["Content-Type"] == "application/json":
         try:
-            error_msg = json.loads(error_msg)["detail"]
+            body = json.loads(body)["detail"]
         except Exception:
             pass
 
-    raise UploadException(
-        f"Error: {response.status} response from the server: {error_msg}"
-    )
+    raise UploadException(f"Error: {response.status} response from the server: {body}")

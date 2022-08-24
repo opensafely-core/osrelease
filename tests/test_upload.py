@@ -1,3 +1,4 @@
+import hashlib
 import io
 import json
 import os
@@ -7,7 +8,7 @@ from zipfile import ZipFile
 
 import pytest
 
-from publisher import signing, upload
+from publisher import schema, signing, upload
 
 from .utils import UrlopenFixture
 
@@ -43,7 +44,24 @@ def urlopen(monkeypatch):
     return data
 
 
-def test_main_forbidden(workspace_files, urlopen):
+def index_body(files, tmp_path):
+    index = {"files": []}
+    for f in files:
+        path = tmp_path / f
+        index["files"].append(
+            {
+                "name": str(f),
+                "size": path.stat().st_size,
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                "date": path.stat().st_mtime,
+            }
+        )
+    return json.dumps(index)
+
+
+def test_main_forbidden(workspace_files, urlopen, tmp_path):
+    body = index_body(workspace_files, tmp_path)
+    urlopen.add_response(HTTPStatus.OK, body=body)
     urlopen.add_response(HTTPStatus.FORBIDDEN)
 
     with pytest.raises(upload.UploadException) as exc:
@@ -52,7 +70,9 @@ def test_main_forbidden(workspace_files, urlopen):
     assert "User user does not have permission" in str(exc.value)
 
 
-def test_main_success_no_upload_permission(workspace_files, urlopen):
+def test_main_success_no_upload_permission(workspace_files, urlopen, tmp_path):
+    body = index_body(workspace_files, tmp_path)
+    urlopen.add_response(HTTPStatus.OK, body=body)
     urlopen.add_response(
         HTTPStatus.CREATED, headers={"Location": "http://hatch/release/id"}
     )
@@ -60,18 +80,22 @@ def test_main_success_no_upload_permission(workspace_files, urlopen):
 
     upload.main(workspace_files, "workspace", "token" * 10, "user", "http://hatch")
 
-    request1 = urlopen.requests[0]
+    request1 = urlopen.requests[1]
     assert request1.full_url == "http://hatch/workspace/workspace/release"
     files = json.loads(request1.data)["files"]
-    assert list(sorted(files.keys())) == list(
+    assert sorted(f["name"] for f in files) == list(
         sorted(["foo.txt", "dir/bar.txt", "outputs/data.csv"])
     )
 
-    request2 = urlopen.requests[1]
+    request2 = urlopen.requests[2]
     assert request2.full_url == "http://hatch/release/id"
 
 
-def test_main_success(workspace_files, urlopen):
+def test_main_success(workspace_files, urlopen, tmp_path):
+
+    body = index_body(workspace_files, tmp_path)
+    urlopen.add_response(HTTPStatus.OK, body=body)
+
     urlopen.add_response(
         HTTPStatus.CREATED, headers={"Location": "http://hatch/release/id"}
     )
@@ -82,12 +106,15 @@ def test_main_success(workspace_files, urlopen):
 
     upload.main(workspace_files, "workspace", backend_token, "user", "http://hatch")
 
-    request = urlopen.requests[0]
+    request = urlopen.requests[1]
     assert request.full_url == "http://hatch/workspace/workspace/release"
     token = signing.AuthToken.verify(
         request.headers["Authorization"], backend_token, salt="hatch"
     )
+    filelist = schema.FileList(**json.loads(request.data))
+    assert filelist.metadata == {"tool": "osrelease"}
+    assert filelist.files[0].name == "foo.txt"
 
-    for f, r in zip(workspace_files, urlopen.requests[1:]):
+    for f, r in zip(workspace_files, urlopen.requests[2:]):
         normalized_path = str(f).replace("\\", "/")
         assert json.loads(r.data) == {"name": normalized_path}
