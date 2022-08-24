@@ -58,20 +58,6 @@ def get_config(env=os.environ):
     return config
 
 
-def git_files(git_dir):
-    old = os.getcwd()
-    try:
-        os.chdir(git_dir)
-        return [
-            Path(x)
-            for x in subprocess.check_output(
-                ["git", "ls-tree", "-r", "HEAD", "--name-only"], encoding="utf8"
-            ).splitlines()
-        ]
-    finally:
-        os.chdir(old)
-
-
 def get_current_user():
     # this works for windows and linux users
     username = getpass.getuser()
