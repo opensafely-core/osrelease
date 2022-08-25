@@ -163,13 +163,22 @@ def load_config(options, release_dir, env=os.environ):
 
 def get_files(options, cfg):
     files = []
-    # upload files to an exisiting release
+    release = None
+
+    # check if the first file is a path to a release, and set release if so
+    if not options.release and options.files:
+        first = Path(options.files[0])
+        if first.parts[0] == "releases" and len(first.parts) == 2:
+            options.release = first.parts[1]
+            options.files = options.files[1:]
+
     if options.release:
+        # upload files to an exisiting release
         # avoid circular import
         from publisher import schema, upload
 
         workspace_url, auth_token = upload.get_auth(cfg)
-        release_url = f"{workspace_url}/release/{options.release}"
+        release_url = f"{workspace_url}/release/{release}"
         response, body = upload.release_hatch("GET", release_url, None, auth_token)
         index = schema.FileList(**json.loads(body))
 
@@ -178,9 +187,7 @@ def get_files(options, cfg):
             for f in options.files:
                 metadata = index.get(f)
                 if metadata is None:
-                    errors.append(
-                        f"Could not find file {f} in release {options.release}"
-                    )
+                    errors.append(f"Could not find file {f} in release {release}")
 
             if errors:
                 sys.exit("\n".join(errors))

@@ -1,15 +1,15 @@
-from http import HTTPStatus
-import json
 import hashlib
+import json
 import os
 import pathlib
 import shutil
 import subprocess
 import tempfile
+from http import HTTPStatus
 
 import pytest
 
-from publisher import release, upload, schema
+from publisher import release, schema, upload
 from tests import utils
 
 
@@ -56,19 +56,22 @@ class Workspace:
     @property
     def files(self):
         """List all files in a directory recursively as a flat list.
-        
-        Sorted, and excluding various files            
+
+        Sorted, and excluding various files
         """
+
         def exclude(p):
             strpath = str(p)
             return (
-                strpath.startswith(".")                                           
-                or strpath.startswith("releases/")                      
-                or strpath.startswith("metadata/")                     
+                strpath.startswith(".")
+                or strpath.startswith("releases/")
+                or strpath.startswith("metadata/")
                 or str(p.name).startswith(".")
             )
-                                            
-        relative_paths = (p.relative_to(self.path) for p in self.path.glob("**/*") if p.is_file())
+
+        relative_paths = (
+            p.relative_to(self.path) for p in self.path.glob("**/*") if p.is_file()
+        )
         return list(sorted(filter(lambda p: not exclude(p), relative_paths)))
 
     def get_index(self):
@@ -109,4 +112,3 @@ def workspace(monkeypatch, tmp_path):
     workspace_dir.mkdir()
     monkeypatch.chdir(workspace_dir)
     return Workspace(name, workspace_dir)
-

@@ -331,3 +331,16 @@ def test_get_files_release_subset_files(options, workspace, urlopen, default_con
 
     assert config.get_files(options, cfg) == ["foo.txt"]
 
+
+def test_get_files_release_path(options, workspace, urlopen, default_config):
+    release = workspace.create_release("release_id")
+    release.write("foo.txt", "foo")
+    release.write("bar.txt", "bar")
+    release.add_urlopen_index(urlopen)
+    options.new_publish = True
+    options.files = ["releases/release_id", "foo.txt"]
+
+    cfg = config.load_config(options, workspace.path)
+    assert config.get_files(options, cfg) == ["foo.txt"]
+    assert options.release == "release_id"
+    assert options.files == ["foo.txt"]
