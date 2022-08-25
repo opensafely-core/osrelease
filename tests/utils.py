@@ -42,7 +42,11 @@ class UrlopenFixture:
     def urlopen(self, request):
         """Replacement urlopen function."""
         self.requests.append(request)
-        socket = self.responses.popleft()
+        try:
+            socket = self.responses.popleft()
+        except IndexError:
+            raise AssertionError("No mocked urlopen responses left!")
+
         response = HTTPResponse(socket, method=request.method)
         response.begin()
         return response

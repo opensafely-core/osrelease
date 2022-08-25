@@ -23,9 +23,19 @@ class Forbidden(Exception):
     pass
 
 
-def main(files, workspace, backend_token, user, api_server):
-    workspace_url = f"{api_server}/workspace/{workspace}"
-    auth_token = get_token(workspace_url, user, backend_token)
+def main(files, cfg):
+    release_id = create_release(files, cfg)
+    upload_to_release(files, release_id, cfg)
+
+
+def get_auth(cfg):
+    workspace_url = f"{cfg['api_server']}/workspace/{cfg['workspace']}"
+    auth_token = get_token(workspace_url, cfg["username"], cfg["backend_token"])
+    return workspace_url, auth_token
+
+
+def create_release(files, cfg):
+    workspace_url, auth_token = get_auth(cfg)
 
     index_url = workspace_url + "/current"
     response, body = release_hatch("GET", index_url, None, auth_token)
@@ -48,13 +58,18 @@ def main(files, workspace, backend_token, user, api_server):
         )
     except Forbidden:
         raise UploadException(
-            f"User {user} does not have permission to create a release"
+            f"User {cfg['username']} does not have permission to create a release"
         )
 
     release_id = response.headers["Release-Id"]
-    release_url = response.headers["Location"]
     logger.info(f"Release {release_id} created with {len(files)} files.")
 
+    return release_id
+
+
+def upload_to_release(files, release_id, cfg):
+    workspace_url, auth_token = get_auth(cfg)
+    release_url = f"{workspace_url}/release/{release_id}"
     try:
         for f in files:
             release_file = ReleaseFile(name=f)
