@@ -60,13 +60,11 @@ class Workspace:
         Sorted, and excluding various files
         """
 
-        def exclude(p):
-            strpath = str(p)
+        def exclude(path):
             return (
-                strpath.startswith(".")
-                or strpath.startswith("releases/")
-                or strpath.startswith("metadata/")
-                or str(p.name).startswith(".")
+                any(p for p in path.parts if p.startswith("."))
+                or path.parts[0] == "releases"
+                or path.parts[0] == "metadata"
             )
 
         relative_paths = (
