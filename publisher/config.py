@@ -178,7 +178,7 @@ def get_files(options, cfg):
         from publisher import schema, upload
 
         workspace_url, auth_token = upload.get_auth(cfg)
-        release_url = f"{workspace_url}/release/{release}"
+        release_url = f"{workspace_url}/release/{options.release}"
         response, body = upload.release_hatch("GET", release_url, None, auth_token)
         index = schema.FileList(**json.loads(body))
 
@@ -187,7 +187,7 @@ def get_files(options, cfg):
             for f in options.files:
                 metadata = index.get(f)
                 if metadata is None:
-                    errors.append(f"Could not find file {f} in release {release}")
+                    errors.append(f"Could not find file {f} in release {options.release}")
 
             if errors:
                 sys.exit("\n".join(errors))
