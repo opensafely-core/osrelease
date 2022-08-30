@@ -107,3 +107,4 @@ def test_main_success(workspace, urlopen, cfg):
     for f, r in zip(workspace.files, urlopen.requests[2:]):
         normalized_path = str(f).replace("\\", "/")
         assert json.loads(r.data) == {"name": normalized_path}
+    assert request.headers["Suppress-github-issue"] == "true"
