@@ -34,7 +34,7 @@ def get_auth(cfg):
     return workspace_url, auth_token
 
 
-def create_release(files, cfg):
+def create_release(files, cfg, skip_github=True):
     workspace_url, auth_token = get_auth(cfg)
 
     index_url = workspace_url + "/current"
@@ -52,9 +52,13 @@ def create_release(files, cfg):
 
     release_create_url = workspace_url + "/release"
 
+    headers = {}
+    if skip_github:
+        headers["Suppress-Github-Issue"] = "true"
+
     try:
         response, _ = release_hatch(
-            "POST", release_create_url, filelist.json(), auth_token
+            "POST", release_create_url, filelist.json(), auth_token, headers,
         )
     except Forbidden:
         raise UploadException(
@@ -95,12 +99,14 @@ def get_token(url, user, backend_token):
     return token.sign(backend_token, salt="hatch")
 
 
-def release_hatch(method, url, data, auth_token):
+def release_hatch(method, url, data, auth_token, headers=None):
     logger.debug(f"{method} {url}: {data}")
-    headers = {
+    if headers is None:
+        headers = {}
+    headers.update({
         "Accept": "application/json",
         "Authorization": auth_token,
-    }
+    })
     if data:
         data = data.encode("utf8")
         headers["Content-Length"] = len(data)
