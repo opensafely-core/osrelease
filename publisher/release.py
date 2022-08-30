@@ -38,7 +38,7 @@ def configure_logging():
     root.setLevel(logging.NOTSET)
     cfg = config.get_config(os.environ)
 
-    private_token = config.get("PRIVATE_REPO_ACCESS_TOKEN")
+    private_token = cfg.get("PRIVATE_REPO_ACCESS_TOKEN")
     if private_token:
         # info level logs go straight to the user using the default format, but
         # redacted
@@ -223,7 +223,7 @@ def main(study_repo_url, token, files, commit_msg, user, backend):
 def release(options, release_dir):
     try:
         cfg = config.load_config(options, release_dir)
-        files = get_files(options, cfg)
+        files = config.get_files(options, cfg)
 
         if not options.yes:
             logger.info("\n".join(str(f) for f in files))
@@ -257,7 +257,7 @@ def release(options, release_dir):
             from publisher import upload
 
             if options.release:
-                upload.upload_to_release(files, release, cfg)
+                upload.upload_to_release(files, options.release, cfg)
             else:
                 upload.main(files, cfg)
 
