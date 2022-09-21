@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+import logging
 import os
 from http import HTTPStatus
 from pathlib import Path
@@ -78,6 +79,34 @@ def test_main_success_no_upload_permission(workspace, urlopen, cfg):
     assert (
         request2.full_url == "http://hatch/workspace/workspace/release/test_release_id"
     )
+
+
+def test_main_too_large(workspace, urlopen, cfg, caplog):
+    caplog.set_level(logging.INFO)
+    workspace.write("foo.txt", "foo")
+
+    workspace.add_urlopen_index(urlopen)
+    urlopen.add_response(HTTPStatus.CREATED, headers={"Release-Id": "test_release_id"})
+    urlopen.add_response(HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
+
+    # it shouldn't error
+    upload.main(workspace.files, cfg)
+
+    assert "file too large" in caplog.records[-2].msg
+
+
+def test_main_already_uploaded(workspace, urlopen, cfg, caplog):
+    caplog.set_level(logging.INFO)
+    workspace.write("foo.txt", "foo")
+
+    workspace.add_urlopen_index(urlopen)
+    urlopen.add_response(HTTPStatus.CREATED, headers={"Release-Id": "test_release_id"})
+    urlopen.add_response(HTTPStatus.BAD_REQUEST, body="already been uploaded")
+
+    # it shouldn't error
+    upload.main(workspace.files, cfg)
+
+    assert "already uploaded" in caplog.records[-2].msg
 
 
 def test_main_success(workspace, urlopen, cfg):

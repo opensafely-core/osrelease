@@ -287,7 +287,23 @@ def test_get_files_not_exist(options, tmp_path, default_config):
     with pytest.raises(SystemExit) as exc_info:
         config.get_files(options, cfg)
 
-    assert "Files do not exist: notexist" in str(exc_info.value)
+    assert "Files do not exist:\nnotexist" in str(exc_info.value)
+
+
+def test_get_files_too_large(options, tmp_path, default_config, monkeypatch):
+    write_manifest(tmp_path)
+    f = tmp_path / "file1.txt"
+    f.write_text("test" * 100)
+    monkeypatch.setattr(config, "MAX_SIZE", 100)
+ 
+    options.files = [str(f)]
+    options.new_publish = True
+
+    cfg = config.load_config(options, tmp_path)
+    with pytest.raises(SystemExit) as exc_info:
+        config.get_files(options, cfg)
+
+    assert f"Files are too large to release:\n{f}" in str(exc_info.value)
 
 
 def test_get_files_release_no_files(options, workspace, urlopen, default_config):

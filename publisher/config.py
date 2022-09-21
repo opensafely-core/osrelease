@@ -10,6 +10,9 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+# 32MB max upload
+MAX_SIZE = 32 * 1024 * 1024
+
 
 def check_workplace_status(workspace_name):
     res = requests.get(
@@ -206,8 +209,13 @@ def get_files(options, cfg):
 
         not_exist = [p for p in files if not p.exists()]
         if not_exist:
-            filelist = ", ".join(str(s) for s in not_exist)
-            sys.exit(f"Files do not exist: {filelist}")
+            filelist = "\n".join(str(s) for s in not_exist)
+            sys.exit(f"Files do not exist:\n{filelist}")
+
+        too_large = [p for p in files if p.stat().st_size > MAX_SIZE]
+        if too_large:
+            filelist = "\n".join(str(s) for s in too_large)
+            sys.exit(f"Files are too large to release:\n{filelist}")
 
     if not files:
         sys.exit("No files provided to release")

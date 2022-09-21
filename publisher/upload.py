@@ -1,4 +1,5 @@
 import hashlib
+
 import io
 import json
 import logging
@@ -20,6 +21,14 @@ class UploadException(Exception):
 
 
 class Forbidden(Exception):
+    pass
+
+
+class UploadTooLarge(UploadException):
+    pass
+
+
+class AlreadyUploaded(UploadException):
     pass
 
 
@@ -78,7 +87,13 @@ def upload_to_release(files, release_id, cfg):
         for f in files:
             release_file = ReleaseFile(name=f)
             logger.info(f" - uploading {f}...")
-            release_hatch("POST", release_url, release_file.json(), auth_token)
+            try:
+                release_hatch("POST", release_url, release_file.json(), auth_token)
+            except UploadTooLarge:
+                logger.info(f"   - file too large")
+            except AlreadyUploaded:
+                logger.info(f"   - already uploaded")
+
     except Forbidden:
         # they can create releases, but not upload them
         logger.info("permission denied")
@@ -130,9 +145,6 @@ def release_hatch(method, url, data, auth_token, headers=None):
     if response.status in (200, 201):
         return response, body
 
-    if response.status == 403:
-        raise Forbidden()
-
     # try get more helpful error message
     if response.headers["Content-Type"] == "application/json":
         try:
@@ -140,4 +152,15 @@ def release_hatch(method, url, data, auth_token, headers=None):
         except Exception:
             pass
 
+    # handle exceptions we understand
+    if response.status == 403:
+        raise Forbidden()
+
+    if response.status == 413:
+        raise UploadTooLarge()
+
+    if response.status == 400 and "already been uploaded" in body:
+        raise AlreadyUploaded()
+         
+    # dunno what it is, raise
     raise UploadException(f"Error: {response.status} response from the server: {body}")
