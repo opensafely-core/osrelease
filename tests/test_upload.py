@@ -1,11 +1,7 @@
-import hashlib
-import io
 import json
 import logging
 import os
 from http import HTTPStatus
-from pathlib import Path
-from zipfile import ZipFile
 
 import pytest
 
@@ -126,7 +122,7 @@ def test_main_success(workspace, urlopen, cfg):
 
     request = urlopen.requests[1]
     assert request.full_url == "http://hatch/workspace/workspace/release"
-    token = signing.AuthToken.verify(
+    signing.AuthToken.verify(
         request.headers["Authorization"], backend_token, salt="hatch"
     )
     filelist = schema.FileList(**json.loads(request.data))

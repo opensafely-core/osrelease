@@ -1,11 +1,8 @@
 import logging
-import os
-import subprocess
-from pathlib import Path
 
 import pytest
 
-from publisher import config, release
+from publisher import release
 
 
 def test_redacting_logger(capsys):

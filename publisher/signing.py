@@ -9,8 +9,7 @@ import hashlib
 from datetime import datetime, timezone
 
 import itsdangerous
-from pydantic import (BaseModel, Field, ValidationError, root_validator,
-                      validator)
+from pydantic import BaseModel, Field, ValidationError, root_validator, validator
 
 
 def create_signer(secret_key, salt):
