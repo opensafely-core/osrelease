@@ -1,15 +1,11 @@
-import hashlib
-import io
 import json
 import logging
-import os
 import sys
 import urllib.error
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from urllib.request import Request, urlopen
 
-from publisher.schema import FileList, FileMetadata, ReleaseFile
+from publisher.schema import FileList, ReleaseFile
 from publisher.signing import AuthToken
 
 logger = logging.getLogger(__name__)
@@ -20,6 +16,14 @@ class UploadException(Exception):
 
 
 class Forbidden(Exception):
+    pass
+
+
+class UploadTooLarge(UploadException):
+    pass
+
+
+class AlreadyUploaded(UploadException):
     pass
 
 
@@ -58,7 +62,11 @@ def create_release(files, cfg, skip_github=True):
 
     try:
         response, _ = release_hatch(
-            "POST", release_create_url, filelist.json(), auth_token, headers,
+            "POST",
+            release_create_url,
+            filelist.json(),
+            auth_token,
+            headers,
         )
     except Forbidden:
         raise UploadException(
@@ -78,7 +86,13 @@ def upload_to_release(files, release_id, cfg):
         for f in files:
             release_file = ReleaseFile(name=f)
             logger.info(f" - uploading {f}...")
-            release_hatch("POST", release_url, release_file.json(), auth_token)
+            try:
+                release_hatch("POST", release_url, release_file.json(), auth_token)
+            except UploadTooLarge:
+                logger.info("   - file too large")
+            except AlreadyUploaded:
+                logger.info("   - already uploaded")
+
     except Forbidden:
         # they can create releases, but not upload them
         logger.info("permission denied")
@@ -103,10 +117,12 @@ def release_hatch(method, url, data, auth_token, headers=None):
     logger.debug(f"{method} {url}: {data}")
     if headers is None:
         headers = {}
-    headers.update({
-        "Accept": "application/json",
-        "Authorization": auth_token,
-    })
+    headers.update(
+        {
+            "Accept": "application/json",
+            "Authorization": auth_token,
+        }
+    )
     if data:
         data = data.encode("utf8")
         headers["Content-Length"] = len(data)
@@ -130,9 +146,6 @@ def release_hatch(method, url, data, auth_token, headers=None):
     if response.status in (200, 201):
         return response, body
 
-    if response.status == 403:
-        raise Forbidden()
-
     # try get more helpful error message
     if response.headers["Content-Type"] == "application/json":
         try:
@@ -140,4 +153,15 @@ def release_hatch(method, url, data, auth_token, headers=None):
         except Exception:
             pass
 
+    # handle exceptions we understand
+    if response.status == 403:
+        raise Forbidden()
+
+    if response.status == 413:
+        raise UploadTooLarge()
+
+    if response.status == 400 and "already been uploaded" in body:
+        raise AlreadyUploaded()
+
+    # dunno what it is, raise
     raise UploadException(f"Error: {response.status} response from the server: {body}")

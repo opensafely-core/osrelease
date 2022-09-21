@@ -239,7 +239,7 @@ def test_load_config_new_publish_as_api_call(options, tmp_path, default_config):
 def test_load_config_new_publish_job_server_down(options, tmp_path, default_config):
     responses.add(
         responses.GET,
-        f"https://jobs.opensafely.org/api/v2/workspaces/workspace/status",
+        "https://jobs.opensafely.org/api/v2/workspaces/workspace/status",
         json={"detail": "Test Error"},
         status=500,
     )
@@ -273,7 +273,7 @@ def test_get_files_no_files(options, default_config, tmp_path):
 
     cfg = config.load_config(options, tmp_path)
     with pytest.raises(SystemExit) as exc_info:
-        config.get_files(options, tmp_path)
+        config.get_files(options, cfg)
 
     assert "No files provided to release" in str(exc_info.value)
 
@@ -287,7 +287,23 @@ def test_get_files_not_exist(options, tmp_path, default_config):
     with pytest.raises(SystemExit) as exc_info:
         config.get_files(options, cfg)
 
-    assert "Files do not exist: notexist" in str(exc_info.value)
+    assert "Files do not exist:\nnotexist" in str(exc_info.value)
+
+
+def test_get_files_too_large(options, tmp_path, default_config, monkeypatch):
+    write_manifest(tmp_path)
+    f = tmp_path / "file1.txt"
+    f.write_text("test" * 100)
+    monkeypatch.setattr(config, "MAX_SIZE", 100)
+
+    options.files = [str(f)]
+    options.new_publish = True
+
+    cfg = config.load_config(options, tmp_path)
+    with pytest.raises(SystemExit) as exc_info:
+        config.get_files(options, cfg)
+
+    assert f"Files are too large to release:\n{f}" in str(exc_info.value)
 
 
 def test_get_files_release_no_files(options, workspace, urlopen, default_config):
