@@ -7,7 +7,7 @@
 # file into your project.
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List
+from typing import Dict
 
 from pydantic import BaseModel
 
@@ -53,7 +53,7 @@ class FileList(BaseModel):
     This must match the json format that the SPA's client API expects.
     """
 
-    files: List[FileMetadata]
+    files: list[FileMetadata]
     metadata: dict = None  # user supplied metadata about thse Release
     review: dict = None  # review comments for the whole Release
 
