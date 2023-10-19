@@ -177,7 +177,7 @@ def test_load_config_username_not_allowed(options, tmp_path, monkeypatch):
     with pytest.raises(SystemExit) as exc_info:
         config.load_config(options, tmp_path, env=env)
 
-    assert "user is not in" in str(exc_info.value)
+    assert "username is not in" in str(exc_info.value)
 
 
 def test_load_config_username_allowed_users_list_still_blocks(
@@ -197,7 +197,7 @@ def test_load_config_username_allowed_users_list_still_blocks(
     with pytest.raises(SystemExit) as exc_info:
         config.load_config(options, tmp_path, env=env)
 
-    assert "user is not in" in str(exc_info.value)
+    assert "username is not in" in str(exc_info.value)
 
 
 def test_load_config_new_publish_as_arg(options, tmp_path, default_config):
