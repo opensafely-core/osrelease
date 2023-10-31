@@ -125,7 +125,9 @@ def load_config(options, release_dir, env=os.environ):
 
     if github_username is None:
         sys.exit(
-            "Your user is not in the local Level 4 list of github users. Please ask tech-support to add your github username."
+            f"We do not know who {local_username} is in Github. "
+            f"Please ask tech-support to add the correct Github username for user {local_username} in the osrelease configuration.\n"
+            "Note: this does not give you permission to release anything, but is a required first step."
         )
 
     workspace = manifest["workspace"]

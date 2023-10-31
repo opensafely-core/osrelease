@@ -172,12 +172,12 @@ def test_load_config_username_not_allowed(options, tmp_path, monkeypatch):
     f = tmp_path / "file.txt"
     f.write_text("test")
     options.files = [str(f)]
-    monkeypatch.setattr("publisher.config.getpass.getuser", lambda: "user")
+    monkeypatch.setattr("publisher.config.getpass.getuser", lambda: "invaliduser")
 
     with pytest.raises(SystemExit) as exc_info:
         config.load_config(options, tmp_path, env=env)
 
-    assert "user is not in" in str(exc_info.value)
+    assert "invaliduser" in str(exc_info.value)
 
 
 def test_load_config_username_allowed_users_list_still_blocks(
@@ -197,7 +197,7 @@ def test_load_config_username_allowed_users_list_still_blocks(
     with pytest.raises(SystemExit) as exc_info:
         config.load_config(options, tmp_path, env=env)
 
-    assert "user is not in" in str(exc_info.value)
+    assert "invaliduser" in str(exc_info.value)
 
 
 def test_load_config_new_publish_as_arg(options, tmp_path, default_config):
