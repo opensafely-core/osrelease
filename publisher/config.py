@@ -12,6 +12,25 @@ logger = logging.getLogger(__name__)
 
 # 32MB max upload
 MAX_SIZE = 32 * 1024 * 1024
+LEVEL4_FILE_TYPES = set(
+    [
+        # tables
+        ".csv",
+        # images
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".svg",
+        ".svgz",
+        # reports
+        ".html",
+        ".pdf",
+        ".txt",
+        ".log",
+        ".json",
+        ".md",
+    ]
+)
 
 
 def check_workplace_status(workspace_name):
@@ -219,6 +238,12 @@ def get_files(options, cfg):
         if too_large:
             filelist = "\n".join(str(s) for s in too_large)
             sys.exit(f"Files are too large to release:\n{filelist}")
+
+        bad_files = [p for p in files if p.suffix not in LEVEL4_FILE_TYPES]
+        if bad_files:
+            filelist = "\n".join(str(s) for s in bad_files)
+            sys.exit(f"These files are not allowed to be released:\n{filelist}")
+
 
     if not files:
         sys.exit("No files provided to release")

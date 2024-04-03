@@ -290,6 +290,20 @@ def test_get_files_not_exist(options, tmp_path, default_config):
     assert "Files do not exist:\nnotexist" in str(exc_info.value)
 
 
+def test_get_files_invalid_type(options, tmp_path, default_config):
+    write_manifest(tmp_path)
+    f = tmp_path / "foo.bar"
+    f.touch()
+    options.files = [str(f)]
+    options.new_publish = True
+
+    cfg = config.load_config(options, tmp_path)
+    with pytest.raises(SystemExit) as exc_info:
+        config.get_files(options, cfg)
+
+    assert f"These files are not allowed to be released:\n{f}" in str(exc_info.value)
+
+
 def test_get_files_too_large(options, tmp_path, default_config, monkeypatch):
     write_manifest(tmp_path)
     f = tmp_path / "file1.txt"
