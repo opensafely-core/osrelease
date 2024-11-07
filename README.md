@@ -1,3 +1,7 @@
+# DEPRECATED
+
+Viewing and releasing files is now handled by https://github.com/opensafely-core/airlock
+
 # OpenSAFELY output publication
 
 **WORK IN PROGRESS**
